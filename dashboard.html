@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Dashboard — JusticiaVial</title>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+  <div class="dash-layout">
+
+    <!-- ═══ TOP BAR ═══ -->
+    <header class="dash-topbar">
+      <div class="dash-brand">
+        <div class="dash-logo">JV</div>
+        <div>
+          <div class="dash-brand-name">JusticiaVial</div>
+          <div class="dash-brand-sub">Estudio Dr. Rodríguez & Asoc.</div>
+        </div>
+      </div>
+      <div class="dash-user">
+        <span class="dash-user-name">Dr. Martín Rodríguez</span>
+        <div class="dash-avatar">MR</div>
+      </div>
+    </header>
+
+    <!-- ═══ NAVIGATION ═══ -->
+    <nav class="dash-nav">
+      <button class="dash-nav-item active" data-tab="leads">
+        Leads <span class="nav-badge">7</span>
+      </button>
+      <button class="dash-nav-item" data-tab="pipeline">
+        Pipeline
+      </button>
+      <button class="dash-nav-item" data-tab="config">
+        Configuración
+      </button>
+    </nav>
+
+    <!-- ═══ CONTENT ═══ -->
+    <main class="dash-content">
+      <div id="panel-leads" class="dash-panel active">
+        <!-- Rendered by JS -->
+      </div>
+      <div id="panel-pipeline" class="dash-panel">
+        <!-- Rendered by JS -->
+      </div>
+      <div id="panel-config" class="dash-panel">
+        <!-- Rendered by JS -->
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ═══ SCRIPTS ═══ -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Calculá gratis cuánto te corresponde por tu accidente de tránsito. Estimado inmediato basado en jurisprudencia argentina. Conectá con un abogado especialista.">
+  <meta name="theme-color" content="#1B3A5C">
+  <title>Calculador de Indemnización — Estudio Rodríguez & Asociados</title>
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Calculá tu indemnización por accidente de tránsito">
+  <meta property="og:description" content="Estimado gratuito e inmediato basado en jurisprudencia argentina. Sin compromiso.">
+  <meta property="og:type" content="website">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+
+  <!-- ═══ NAVBAR ═══ -->
+  <nav class="lp-nav">
+    <div class="lp-nav-inner">
+      <a href="/" class="lp-nav-brand">
+        <div class="lp-nav-logo">JV</div>
+        <div>
+          <div class="lp-nav-name">Estudio Rodríguez & Asoc.</div>
+          <div class="lp-nav-sub">Especialistas en siniestros viales</div>
+        </div>
+      </a>
+      <button class="lp-nav-cta" onclick="window.open('https://wa.me/5491100000000','_blank')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.29-1.243l-.307-.184-2.87.852.852-2.87-.184-.307A8 8 0 1112 20z"/></svg>
+        Consultar
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══ HERO ═══ -->
+  <section class="lp-hero">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      Calculador gratuito y confidencial
+    </div>
+    <h1>¿Tuviste un accidente de tránsito? Calculá <em>cuánto te corresponde</em></h1>
+    <p class="hero-subtitle">
+      Recibí un estimado inmediato de tu indemnización basado en jurisprudencia argentina. Sin compromiso, sin costo, en 2 minutos.
+    </p>
+    <div class="hero-cta-group">
+      <button class="btn btn-primary btn-lg" onclick="openCalculator()">
+        Calcular mi indemnización <span class="hero-arrow">&rarr;</span>
+      </button>
+      <button class="btn btn-outline btn-lg" onclick="window.open('https://wa.me/5491100000000','_blank')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.29-1.243l-.307-.184-2.87.852.852-2.87-.184-.307A8 8 0 1112 20z"/></svg>
+        Hablar por WhatsApp
+      </button>
+    </div>
+    <div class="hero-trust">
+      <span class="hero-trust-item">
+        <span class="hero-trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+        100% confidencial
+      </span>
+      <span class="hero-trust-item">
+        <span class="hero-trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+        Resultado en 2 min
+      </span>
+      <span class="hero-trust-item">
+        <span class="hero-trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+        +2.400 casos resueltos
+      </span>
+    </div>
+  </section>
+
+  <!-- ═══ STATS BAR ═══ -->
+  <section class="lp-stats">
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-number">$4.8M</div>
+        <div class="stat-label">Indemnización promedio obtenida</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">92%</div>
+        <div class="stat-label">Tasa de éxito en nuestros litigios</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">15+</div>
+        <div class="stat-label">Años de experiencia comprobable</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ HOW IT WORKS ═══ -->
+  <section class="lp-section">
+    <div class="section-tag">Cómo funciona</div>
+    <h2 class="section-h2">Tu reclamo en 3 pasos simples</h2>
+    <p class="section-p">No necesitás entender de leyes. Nosotros nos encargamos de todo mientras vos te recuperás.</p>
+    <div class="steps-list">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>Completá tus datos básicos</h3>
+          <p>Solo necesitamos tu nombre, WhatsApp y ciudad. Con eso ya podemos ayudarte.</p>
+          <div class="step-time">30 segundos</div>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>Respondé sobre el siniestro</h3>
+          <p>Preguntas simples sobre lo que pasó: lesiones, datos del responsable, documentación. Sin tecnicismos legales.</p>
+          <div class="step-time">1 minuto</div>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h3>Recibí tu estimado y hablá con un abogado</h3>
+          <p>Te mostramos cuánto podría corresponderte según la jurisprudencia y te conectamos directo con un especialista por WhatsApp.</p>
+          <div class="step-time">Resultado inmediato</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CALCULATOR PREVIEW ═══ -->
+  <section class="lp-section" style="padding-top:0">
+    <div class="section-tag">Vista previa</div>
+    <h2 class="section-h2">Así se ve tu resultado</h2>
+    <p class="section-p">Nuestro calculador usa fórmulas de jurisprudencia argentina real (Vuoto/Marshall) para darte un rango preciso y creíble.</p>
+    <div class="calc-preview">
+      <div class="calc-preview-header">
+        <span class="calc-dot calc-dot-red"></span>
+        <span class="calc-dot calc-dot-yellow"></span>
+        <span class="calc-dot calc-dot-green"></span>
+        <span style="font-size:13px;font-weight:500;margin-left:8px">Resultado del cálculo</span>
+      </div>
+      <div class="calc-preview-body">
+        <div class="calc-result-amount">$4.200.000 — $8.400.000</div>
+        <div class="calc-result-label">Rango estimado de indemnización</div>
+        <div class="calc-bar"><div class="calc-bar-fill" style="width:82%"></div></div>
+        <div class="calc-breakdown">
+          <div class="calc-row">
+            <span class="calc-row-label">Incapacidad sobreviniente</span>
+            <span class="calc-row-value">$3.180.000</span>
+          </div>
+          <div class="calc-row">
+            <span class="calc-row-label">Lucro cesante</span>
+            <span class="calc-row-value">$990.000</span>
+          </div>
+          <div class="calc-row">
+            <span class="calc-row-label">Daño moral</span>
+            <span class="calc-row-value">$954.000</span>
+          </div>
+          <div class="calc-row">
+            <span class="calc-row-label">Gastos médicos</span>
+            <span class="calc-row-value">$350.000</span>
+          </div>
+          <div class="calc-row">
+            <span class="calc-row-label">Daño estético</span>
+            <span class="calc-row-value">$254.400</span>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:16px">
+          <span class="badge badge-alto" style="font-size:13px;padding:6px 16px">Score: 87/100 — Caso prioritario</span>
+        </div>
+      </div>
+    </div>
+    <div class="text-center mt-lg">
+      <button class="btn btn-primary btn-lg" onclick="openCalculator()">
+        Quiero calcular el mío <span class="hero-arrow">&rarr;</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ═══ BENEFITS ═══ -->
+  <section class="lp-section" style="padding-top:0">
+    <div class="section-tag">Por qué elegirnos</div>
+    <h2 class="section-h2">Tu caso merece especialistas</h2>
+    <p class="section-p">Las aseguradoras tienen equipos legales completos. Vos también merecés uno que pelee por lo que te corresponde.</p>
+    <div class="benefits-grid">
+      <div class="benefit-card">
+        <div class="benefit-icon" style="background:var(--jv-teal-bg);color:var(--jv-teal)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h4>Solo cobramos si ganamos</h4>
+        <p>Trabajamos a resultado. Si no recuperás tu indemnización, no nos debés absolutamente nada.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon" style="background:#EEEDFE;color:#534AB7">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h4>Respuesta en horas</h4>
+        <p>Tu caso es evaluado por un abogado especialista dentro de las primeras 4 horas de recibido.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon" style="background:var(--jv-success-bg);color:var(--jv-success)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h4>Seguimiento en tiempo real</h4>
+        <p>Vas a saber en todo momento en qué etapa está tu reclamo. Sin llamar, sin esperar respuestas.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon" style="background:var(--jv-warning-bg);color:var(--jv-warning)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <h4>Atención por WhatsApp</h4>
+        <p>Hablá directamente con tu abogado cuando lo necesites. Sin intermediarios ni esperas telefónicas.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ TESTIMONIALS ═══ -->
+  <section class="lp-section" style="padding-top:0">
+    <div class="section-tag">Casos reales</div>
+    <h2 class="section-h2">Lo que dicen nuestros clientes</h2>
+    <div class="testimonials-list">
+      <div class="testimonial-card">
+        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <div class="testimonial-text">"La aseguradora me ofrecía $800.000. Con el estudio Rodríguez obtuve $4.200.000 de indemnización por mi fractura de clavícula. El calculador me dio la confianza que necesitaba para reclamar lo que realmente me correspondía."</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:var(--jv-teal-bg);color:var(--jv-teal-dark)">LG</div>
+          <div>
+            <div class="testimonial-name">Laura G.</div>
+            <div class="testimonial-detail">CABA — Colisión vehicular, 2025</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <div class="testimonial-text">"Me atropellaron en la senda peatonal y el conductor se fugó. El equipo encontró las cámaras del municipio y logró identificar al responsable."</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:#EEEDFE;color:#534AB7">CM</div>
+          <div>
+            <div class="testimonial-name">Carlos M.</div>
+            <div class="testimonial-detail">La Plata — Atropello, 2025</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <div class="testimonial-text">"Usé el calculador a las 3 AM desde el hospital y al otro día ya me estaban asesorando. Gracias por la contención y el profesionalismo."</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:var(--jv-success-bg);color:var(--jv-success-text)">VR</div>
+          <div>
+            <div class="testimonial-name">Valentina R.</div>
+            <div class="testimonial-detail">Avellaneda — Colisión en ruta, 2026</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FAQ ═══ -->
+  <section class="lp-section" style="padding-top:0">
+    <div class="section-tag">Preguntas frecuentes</div>
+    <h2 class="section-h2">Todo lo que necesitás saber</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question">
+          ¿El cálculo es realmente gratuito?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          Sí, completamente. El calculador es una herramienta gratuita y sin compromiso. Podés usarlo las veces que quieras. Solo si decidís avanzar con tu reclamo y aceptás nuestra representación, se establece un acuerdo de honorarios a resultado (solo cobramos si ganamos tu caso).
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">
+          ¿Cuánto tiempo tengo para reclamar?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          En Argentina, el plazo de prescripción para reclamos por accidentes de tránsito es de 3 años desde la fecha del siniestro. Sin embargo, te recomendamos iniciar el reclamo lo antes posible para preservar la evidencia y fortalecer tu caso.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">
+          ¿Qué pasa si no tengo datos del otro conductor?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          Aún podés tener un caso viable. Existen mecanismos legales para identificar al responsable: cámaras de seguridad municipales, testigos, registros del 911, pericias técnicas y otras herramientas de investigación. Nuestro equipo evalúa cada situación individualmente.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">
+          La aseguradora ya me hizo una oferta. ¿Debería aceptar?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          En la gran mayoría de los casos, la primera oferta de la aseguradora es significativamente inferior a lo que corresponde según la jurisprudencia vigente. Usá nuestro calculador para comparar. En nuestra experiencia, los montos obtenidos judicialmente son entre 3 y 8 veces superiores a las ofertas iniciales de las aseguradoras.
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">
+          ¿Necesito ir a tribunales personalmente?
+          <span class="faq-arrow">&#9660;</span>
+        </button>
+        <div class="faq-answer">
+          En la mayoría de las etapas, no. Tu abogado se encarga de todas las presentaciones judiciales y audiencias. Solo podrías necesitar asistir a la mediación (instancia previa obligatoria) y eventualmente a una pericia médica. Te acompañamos en todo momento y te preparamos para cada instancia.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CTA FINAL ═══ -->
+  <section class="lp-cta-final">
+    <div class="cta-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <polyline points="9 12 11 14 15 10"/>
+      </svg>
+    </div>
+    <h2 class="section-h2">No dejes que la aseguradora decida por vos</h2>
+    <p class="section-p" style="margin-bottom:24px">
+      Cada día que pasa sin reclamar es plata que perdés. Calculá tu indemnización ahora y tomá una decisión informada con datos reales.
+    </p>
+    <button class="btn btn-primary btn-lg" onclick="openCalculator()">
+      Calcular mi indemnización gratis <span class="hero-arrow">&rarr;</span>
+    </button>
+    <div class="cta-disclaimer">Sin compromiso · Confidencial · Resultado inmediato</div>
+  </section>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="lp-footer">
+    <div class="footer-brand">Estudio Rodríguez & Asociados</div>
+    <div class="footer-info">
+      Especialistas en derecho de seguros y accidentes de tránsito<br>
+      Av. Corrientes 1234, Piso 8 — CABA<br>
+      Mat. CPACF T° 102 F° 345
+    </div>
+    <div class="footer-links">
+      <a href="#">Política de privacidad</a>
+      <a href="#">Términos y condiciones</a>
+      <a href="#">Contacto</a>
+    </div>
+    <div class="footer-powered">
+      Powered by JusticiaVial · Este calculador es orientativo y no constituye asesoramiento legal.
+    </div>
+  </footer>
+
+  <!-- ═══ FLOATING CTA BAR ═══ -->
+  <div class="floating-bar" id="floatingBar">
+    <button class="btn btn-primary" onclick="openCalculator()">
+      Calcular indemnización <span class="hero-arrow">&rarr;</span>
+    </button>
+    <button class="btn btn-whatsapp btn-icon" onclick="window.open('https://wa.me/5491100000000','_blank')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.29-1.243l-.307-.184-2.87.852.852-2.87-.184-.307A8 8 0 1112 20z"/></svg>
+    </button>
+  </div>
+
+  <!-- ═══ CALCULATOR MODAL ═══ -->
+  <div class="calc-modal" id="calcModal">
+    <div class="calc-modal-header">
+      <span class="calc-modal-title">Calculador de Indemnización</span>
+      <button class="calc-close-btn" onclick="closeCalculator()">&times;</button>
+    </div>
+    <div class="step-progress" id="stepProgress">
+      <div class="step-pill"></div>
+      <div class="step-pill"></div>
+      <div class="step-pill"></div>
+      <div class="step-pill"></div>
+    </div>
+    <div class="calc-step-content" id="stepContent">
+      <!-- Steps rendered by JS -->
+    </div>
+  </div>
+
+  <!-- ═══ SCRIPTS ═══ -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/landing.js"></script>
+
+</body>
+</html>
