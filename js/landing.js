@@ -65,14 +65,14 @@
   // ── Open Calculator ──
   window.openCalculator = function() {
     state.step = 1;
-    calcModal.classList.add('active');
+    calcModal.style.display = 'block';
     document.body.style.overflow = 'hidden';
     renderStep();
   };
 
   // ── Close Calculator ──
   window.closeCalculator = function() {
-    calcModal.classList.remove('active');
+    calcModal.style.display = 'none';
     document.body.style.overflow = '';
   };
 
@@ -94,9 +94,9 @@
     const pills = stepProgress.querySelectorAll('.step-pill');
     pills.forEach((pill, i) => {
       const n = i + 1;
-      pill.className = 'step-pill';
-      if (n < state.step) pill.classList.add('done');
-      if (n === state.step) pill.classList.add('active');
+      if (n < state.step) pill.style.background = '#4ADE80';
+      else if (n === state.step) pill.style.background = '#C9A84C';
+      else pill.style.background = '#222234';
     });
   }
 

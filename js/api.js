@@ -13,8 +13,8 @@
 // ══════════════════════════════════════════
 // 🔧 CONFIGURAR ESTAS DOS VARIABLES
 // ══════════════════════════════════════════
-const SUPABASE_URL = 'https://dmfysunumdkdliiglnih.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZnlzdW51bWRrZGxpaWdsbmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NTA3MzcsImV4cCI6MjA4OTAyNjczN30.mCmXda9jWhrqAqu187a3mePWO3ShLdwIl_aVEn1Smak';
+const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co';
+const SUPABASE_ANON_KEY = 'tu-anon-key-aqui';
 // ══════════════════════════════════════════
 
 let _supabase = null;
