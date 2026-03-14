@@ -91,12 +91,12 @@
 
   function updateProgress() {
     if (!stepProgress) return;
-    const pills = stepProgress.querySelectorAll('.step-pill');
+    const pills = stepProgress.querySelectorAll('.pill');
     pills.forEach((pill, i) => {
       const n = i + 1;
-      if (n < state.step) pill.style.background = '#4ADE80';
-      else if (n === state.step) pill.style.background = '#C9A84C';
-      else pill.style.background = '#222234';
+      if (n < state.step) pill.style.background = '#4AB866';
+      else if (n === state.step) pill.style.background = '#C4652A';
+      else pill.style.background = '#E2D5C7';
     });
   }
 
