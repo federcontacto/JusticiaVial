@@ -13,12 +13,12 @@ const JV_CONFIG = {
 
   // ── Datos del Estudio (personalizar por tenant) ──
   estudio: {
-    nombre: "Estudio Rodríguez & Asociados",
-    nombreCorto: "Estudio Rodríguez",
-    slug: "rodriguez",
-    whatsapp: "5491100000000", // Sin + ni espacios
-    telefono: "+54 11 0000-0000",
-    email: "consultas@estudiorodriguez.com.ar",
+    nombre: "Estudio Lagrenade & Asociados",
+    nombreCorto: "Estudio Lagrenade",
+    slug: "lagrenade",
+    whatsapp: "5491130568410", // Sin + ni espacios
+    telefono: "+549 113 0568 410",
+    email: "@estudiorodriguez.com.ar",
     direccion: "Av. Corrientes 1234, Piso 8 — CABA",
     matricula: "Mat. CPACF T° 102 F° 345",
     logo: null, // URL del logo (null = usa iniciales)
