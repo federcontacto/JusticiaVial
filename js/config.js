@@ -18,9 +18,9 @@ const JV_CONFIG = {
     slug: "lagrenade",
     whatsapp: "5491130568410", // Sin + ni espacios
     telefono: "+549 113 0568 410",
-    email: "@estudiorodriguez.com.ar",
-    direccion: "Av. Corrientes 1234, Piso 8 — CABA",
-    matricula: "Mat. CPACF T° 102 F° 345",
+    email: "Agustin_lagrenade@hotmail.com",
+    direccion: "Misiones, Argentina",
+    matricula: "",
     logo: null, // URL del logo (null = usa iniciales)
     colores: {
       primary: "#1B3A5C",
@@ -164,7 +164,7 @@ const JV_CONFIG = {
 
   // ── Textos de la Landing Page ──
   textos: {
-    heroTitulo: '¿Tuviste un accidente de tránsito? Calculá <em>cuánto te corresponde</em>',
+    heroTitulo: 'NADA QUE VER .<em>No lo que la aseguradora quiere pagarte...</em>',
     heroSubtitulo: "Recibí un estimado inmediato de tu indemnización basado en jurisprudencia argentina. Sin compromiso, sin costo, en 2 minutos.",
     heroCta: "Calcular mi indemnización",
     
