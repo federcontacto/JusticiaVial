@@ -140,7 +140,7 @@
     leadCalculador: "Hola, usé el calculador de indemnización y mi estimado es de {monto_min} a {monto_max}. Me llamo {nombre} y quiero asesoría para mi caso de siniestro vial.",
     
     // Mensaje de bienvenida del estudio al lead
-    bienvenida: "Hola {nombre}, soy del Estudio Rodríguez. Recibimos tu consulta sobre tu siniestro con un estimado de {monto_min} a {monto_max}. ¿Podemos agendar una llamada para evaluar tu caso?",
+    bienvenida: "Hola {nombre}, soy del Estudio Lagrenade. Recibimos tu consulta sobre tu siniestro con un estimado de {monto_min} a {monto_max}. ¿Podemos agendar una llamada para evaluar tu caso?",
     
     // Mensaje de seguimiento
     seguimiento: "Hola {nombre}, queríamos saber si pudiste revisar la información que te enviamos sobre tu caso. Estamos a disposición para avanzar con tu reclamo.",
@@ -148,7 +148,7 @@
 
   // ── Textos de la Landing Page ──
   textos: {
-    heroTitulo: 'NADA QUE VER .<em>No lo que la aseguradora quiere pagarte...</em>',
+    heroTitulo: 'Calculá cuánto te corresponde de verdad. <em>No lo que la aseguradora quiere pagarte...</em>',
     heroSubtitulo: "Recibí un estimado inmediato de tu indemnización basado en jurisprudencia argentina. Sin compromiso, sin costo, en 2 minutos.",
     heroCta: "Calcular mi indemnización",
     
@@ -163,12 +163,7 @@
 
   // ── Catálogos ──
   ciudades: [
-    "CABA", "La Plata", "Avellaneda", "Quilmes", "Morón", 
-    "San Isidro", "Tigre", "Lomas de Zamora", "La Matanza",
-    "Mar del Plata", "Bahía Blanca", "San Nicolás",
-    "Paraná", "Concordia", "Gualeguaychú",
-    "Posadas", "Oberá", "Eldorado",
-    "Otra"
+    "CABA", "Entre Rios", "Misiones"
   ],
 
   aseguradoras: [
