@@ -9,22 +9,6 @@
    
    ══════════════════════════════════════════════ */
 
-const JV_CONFIG = {
-
-  // ── Datos del Estudio (personalizar por tenant) ──
-  estudio: {
-    nombre: "Estudio Lagrenade & Asociados",
-    nombreCorto: "Estudio Lagrenade",
-    slug: "lagrenade",
-    whatsapp: "5491130568410", // Sin + ni espacios
-    telefono: "+549 113 0568 410",
-    email: "Agustin_lagrenade@hotmail.com",
-    direccion: "Misiones, Argentina",
-    matricula: "",
-    logo: null, // URL del logo (null = usa iniciales)
-    colores: {
-      primary: "#1B3A5C",
-      accent: "#2E86AB"
     }
   },
 
