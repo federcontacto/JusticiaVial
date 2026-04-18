@@ -13,6 +13,7 @@
   let leadsData     = [];
   let casesData     = [];
   let keywordsData  = [];
+  let usersData     = [];
   let searchQuery   = '';
   let activeTab     = 'leads';
   let activeFilter  = 'todos';
@@ -72,6 +73,7 @@
 
     await Promise.all([loadLeads(), loadCases()]);
 
+    applyRoleAccess();
     showLoading(false);
     switchTab('leads');
 
@@ -96,6 +98,12 @@
     const { data, error } = await JV_API.getKeywords(currentUser.tenant_id);
     if (!error && data) keywordsData = data;
     return keywordsData;
+  }
+
+  async function loadUsers() {
+    const { data, error } = await JV_API.getUsers(currentUser.tenant_id);
+    if (!error && data) usersData = data;
+    return usersData;
   }
 
   // ══════════════════════════════════════════
@@ -141,9 +149,28 @@
   }
 
   // ══════════════════════════════════════════
+  // CONTROL DE ACCESO POR ROL
+  // ══════════════════════════════════════════
+  function canAccessTab(tab) {
+    const role = currentUser?.role;
+    if (!role || role === 'admin') return true;
+    if (role === 'abogado')   return ['leads', 'pipeline', 'analytics'].includes(tab);
+    if (role === 'secretaria') return tab === 'leads';
+    return tab === 'leads';
+  }
+
+  function applyRoleAccess() {
+    document.querySelectorAll('.dash-nav-item[data-tab]').forEach(item => {
+      item.style.display = canAccessTab(item.dataset.tab) ? '' : 'none';
+    });
+  }
+
+  // ══════════════════════════════════════════
   // TAB SWITCHING
   // ══════════════════════════════════════════
   function switchTab(tab) {
+    // Redirigir a leads si el rol no tiene acceso
+    if (!canAccessTab(tab)) { switchTab('leads'); return; }
     activeTab = tab;
     document.querySelectorAll('.dash-nav-item').forEach(n =>
       n.classList.toggle('active', n.dataset.tab === tab));
@@ -606,9 +633,24 @@
   // ══════════════════════════════════════════
   async function renderConfigPanel() {
     const panel = document.getElementById('panel-config');
+
+    // Sección restringida a admins
+    if (!canAccessTab('config')) {
+      panel.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🔒</div>
+          <div class="empty-state-title">Acceso restringido</div>
+          <div class="empty-state-desc">La configuración es solo para administradores del estudio.</div>
+        </div>`;
+      return;
+    }
+
     panel.innerHTML = `<div style="color:#94A3B8;padding:20px 0">Cargando configuración...</div>`;
 
-    await loadKeywords();
+    await Promise.all([
+      loadKeywords(),
+      loadUsers(),
+    ]);
 
     const t   = currentTenant || {};
     const fc  = t.formula_config  || JV_CONFIG.formula;
@@ -664,6 +706,8 @@
           <span class="config-save-msg" id="msg-studio">✓ Guardado</span>
         </div>
       `)}
+
+      ${accordion('users', '👥', 'Usuarios y permisos', 'Alta, baja y modificación de usuarios del estudio', renderUsersBody())}
 
       ${accordion('formula', '⚖️', 'Fórmula Vuoto', 'Coeficientes de cálculo de indemnizaciones', `
         <div class="config-section-label">Coeficientes principales</div>
@@ -1109,6 +1153,260 @@
   }
 
   // ══════════════════════════════════════════
+  // USUARIOS — ABM
+  // ══════════════════════════════════════════
+  function renderUsersBody() {
+    const buildRow = u => {
+      const initials = (u.full_name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+      const isSelf   = u.id === currentUser.id;
+      return `
+        <tr>
+          <td>
+            <div class="user-row-info">
+              <div class="user-avatar-sm">${initials}</div>
+              <div>
+                <div class="user-name-cell">${esc(u.full_name || '—')}</div>
+                ${isSelf ? '<div class="user-self-badge">Vos</div>' : ''}
+              </div>
+            </div>
+          </td>
+          <td class="user-email-cell">${esc(u.email)}</td>
+          <td>
+            <select class="user-role-select" data-id="${u.id}"
+              onchange="JV_DASH.updateUserRole(this.dataset.id, this.value)"
+              ${isSelf ? 'disabled title="No podés cambiar tu propio rol"' : ''}>
+              <option value="admin"      ${u.role === 'admin'      ? 'selected' : ''}>👑 Admin</option>
+              <option value="abogado"    ${u.role === 'abogado'    ? 'selected' : ''}>⚖️ Abogado/a</option>
+              <option value="secretaria" ${u.role === 'secretaria' ? 'selected' : ''}>📋 Secretaria/o</option>
+            </select>
+          </td>
+          <td>
+            <button class="user-toggle-btn ${u.is_active ? 'active' : ''}"
+              data-id="${u.id}" data-active="${u.is_active}"
+              onclick="JV_DASH.toggleUserActive(this.dataset.id, this.dataset.active !== 'true')"
+              ${isSelf ? 'disabled' : ''}>
+              ${u.is_active ? '● Activo' : '○ Inactivo'}
+            </button>
+          </td>
+          <td>
+            ${!isSelf
+              ? `<button class="btn-icon-del" data-id="${u.id}"
+                  onclick="JV_DASH.deleteUser(this.dataset.id)" title="Eliminar usuario">🗑</button>`
+              : ''}
+          </td>
+        </tr>`;
+    };
+
+    return `
+      <div class="config-section-label">Usuarios del estudio</div>
+      <div style="max-height:300px;overflow-y:auto;border:1px solid #E2E8F0;border-radius:8px;margin-bottom:16px">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Email</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            ${usersData.length
+              ? usersData.map(buildRow).join('')
+              : '<tr><td colspan="5" style="text-align:center;color:#94A3B8;padding:24px">No hay usuarios registrados</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="config-section-label">Permisos por rol</div>
+      <div class="perms-info-grid">
+        <div class="perms-role-card">
+          <div class="perms-role-name">👑 Administrador</div>
+          <ul class="perms-role-list">
+            <li>Leads y contacto</li>
+            <li>Pipeline de litigios</li>
+            <li>Analíticas</li>
+            <li>Configuración</li>
+            <li>Gestión de usuarios</li>
+          </ul>
+        </div>
+        <div class="perms-role-card">
+          <div class="perms-role-name">⚖️ Abogado/a</div>
+          <ul class="perms-role-list">
+            <li>Leads y contacto</li>
+            <li>Pipeline de litigios</li>
+            <li>Analíticas</li>
+            <li class="denied">Configuración</li>
+            <li class="denied">Gestión de usuarios</li>
+          </ul>
+        </div>
+        <div class="perms-role-card">
+          <div class="perms-role-name">📋 Secretaria/o</div>
+          <ul class="perms-role-list">
+            <li>Leads y contacto</li>
+            <li class="denied">Pipeline de litigios</li>
+            <li class="denied">Analíticas</li>
+            <li class="denied">Configuración</li>
+            <li class="denied">Gestión de usuarios</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="config-section-label" style="margin-top:20px">+ Invitar nuevo usuario</div>
+      <div class="user-invite-form">
+        <div>
+          <label>Nombre completo</label>
+          <input id="inv-nombre" type="text" placeholder="Ej: María García">
+        </div>
+        <div>
+          <label>Email</label>
+          <input id="inv-email" type="email" placeholder="maria@estudio.com">
+        </div>
+        <div>
+          <label>Contraseña temporal</label>
+          <input id="inv-pass" type="text" placeholder="Mín. 8 caracteres">
+        </div>
+        <div>
+          <label>Rol</label>
+          <select id="inv-rol">
+            <option value="abogado">⚖️ Abogado/a</option>
+            <option value="secretaria">📋 Secretaria/o</option>
+            <option value="admin">👑 Admin</option>
+          </select>
+        </div>
+        <button class="btn btn-teal btn-sm" id="inv-btn" onclick="JV_DASH.inviteUser()" style="margin-top:0;align-self:end">
+          Invitar →
+        </button>
+      </div>
+      <div class="user-invite-note">
+        📧 Se enviará un email de confirmación al usuario. Compartí la contraseña temporal de forma segura (por teléfono o mensaje directo).
+      </div>
+      <div style="margin-top:10px">
+        <span class="config-save-msg" id="msg-users">✓ Usuario creado correctamente</span>
+      </div>
+    `;
+  }
+
+  function refreshUsersTable() {
+    const tbody = document.getElementById('users-tbody');
+    if (!tbody) return;
+    if (usersData.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94A3B8;padding:24px">No hay usuarios</td></tr>';
+      return;
+    }
+    tbody.innerHTML = usersData.map(u => {
+      const initials = (u.full_name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+      const isSelf   = u.id === currentUser.id;
+      return `
+        <tr>
+          <td>
+            <div class="user-row-info">
+              <div class="user-avatar-sm">${initials}</div>
+              <div>
+                <div class="user-name-cell">${esc(u.full_name || '—')}</div>
+                ${isSelf ? '<div class="user-self-badge">Vos</div>' : ''}
+              </div>
+            </div>
+          </td>
+          <td class="user-email-cell">${esc(u.email)}</td>
+          <td>
+            <select class="user-role-select" data-id="${u.id}"
+              onchange="JV_DASH.updateUserRole(this.dataset.id, this.value)"
+              ${isSelf ? 'disabled' : ''}>
+              <option value="admin"      ${u.role === 'admin'      ? 'selected' : ''}>👑 Admin</option>
+              <option value="abogado"    ${u.role === 'abogado'    ? 'selected' : ''}>⚖️ Abogado/a</option>
+              <option value="secretaria" ${u.role === 'secretaria' ? 'selected' : ''}>📋 Secretaria/o</option>
+            </select>
+          </td>
+          <td>
+            <button class="user-toggle-btn ${u.is_active ? 'active' : ''}"
+              data-id="${u.id}" data-active="${u.is_active}"
+              onclick="JV_DASH.toggleUserActive(this.dataset.id, this.dataset.active !== 'true')"
+              ${isSelf ? 'disabled' : ''}>
+              ${u.is_active ? '● Activo' : '○ Inactivo'}
+            </button>
+          </td>
+          <td>
+            ${!isSelf
+              ? `<button class="btn-icon-del" data-id="${u.id}"
+                  onclick="JV_DASH.deleteUser(this.dataset.id)">🗑</button>`
+              : ''}
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  async function inviteUser() {
+    const nombre = v('inv-nombre').trim();
+    const email  = v('inv-email').trim();
+    const pass   = v('inv-pass').trim();
+    const rol    = v('inv-rol');
+
+    if (!nombre)            { alert('Ingresá el nombre completo del usuario.'); return; }
+    if (!email)             { alert('Ingresá el email del usuario.'); return; }
+    if (pass.length < 8)    { alert('La contraseña temporal debe tener al menos 8 caracteres.'); return; }
+
+    const btn = document.getElementById('inv-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Creando...'; }
+
+    const { data, error } = await JV_API.inviteUser(currentUser.tenant_id, email, nombre, pass, rol);
+
+    if (btn) { btn.disabled = false; btn.textContent = 'Invitar →'; }
+
+    if (error) {
+      const msg = error.message || JSON.stringify(error);
+      // Error común: usuario ya existe en Auth
+      if (msg.includes('already registered') || msg.includes('duplicate')) {
+        alert('⚠ Ese email ya está registrado en el sistema.');
+      } else {
+        alert('Error al crear usuario: ' + msg);
+      }
+      return;
+    }
+
+    usersData.push(data);
+    refreshUsersTable();
+    document.getElementById('inv-nombre').value = '';
+    document.getElementById('inv-email').value  = '';
+    document.getElementById('inv-pass').value   = '';
+    flashMsg('msg-users');
+  }
+
+  async function updateUserRole(userId, newRole) {
+    const { error } = await JV_API.updateUserRole(userId, newRole);
+    if (error) {
+      alert('Error al cambiar rol: ' + error.message);
+      // Revertir la tabla al estado anterior
+      await loadUsers();
+      refreshUsersTable();
+      return;
+    }
+    const u = usersData.find(x => x.id === userId);
+    if (u) u.role = newRole;
+    // Aplicar acceso si el usuario modificado es el actual
+    if (userId === currentUser.id) { currentUser.role = newRole; applyRoleAccess(); }
+  }
+
+  async function toggleUserActive(userId, newActive) {
+    const { error } = await JV_API.toggleUserActive(userId, newActive);
+    if (error) { alert('Error: ' + error.message); return; }
+    const u = usersData.find(x => x.id === userId);
+    if (u) u.is_active = newActive;
+    refreshUsersTable();
+  }
+
+  async function deleteUser(userId) {
+    const u = usersData.find(x => x.id === userId);
+    if (!u) return;
+    if (u.id === currentUser.id) { alert('No podés eliminarte a vos mismo.'); return; }
+    if (!confirm(`¿Eliminar al usuario "${u.full_name}"?\nEsta acción no se puede deshacer.`)) return;
+    const { error } = await JV_API.deleteUser(userId);
+    if (error) { alert('Error: ' + error.message); return; }
+    usersData = usersData.filter(x => x.id !== userId);
+    refreshUsersTable();
+  }
+
+  // ══════════════════════════════════════════
   // ACCORDION
   // ══════════════════════════════════════════
   function toggleAccordion(id) {
@@ -1212,6 +1510,10 @@
     changePassword: ()=> changePassword(),
     addKeyword  : ()  => addKeyword(),
     deleteKeyword: id => deleteKeyword(id),
+    inviteUser  : ()  => inviteUser(),
+    updateUserRole  : (id, role)   => updateUserRole(id, role),
+    toggleUserActive: (id, active) => toggleUserActive(id, active),
+    deleteUser  : id  => deleteUser(id),
     async logout() {
       if (realtimeSub) JV_API.unsubscribe(realtimeSub);
       await JV_API.logout();

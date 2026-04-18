@@ -521,6 +521,108 @@ const JV_API = {
     const { data, error } = await sb.auth.updateUser({ password: newPassword });
     return error ? { error } : { data };
   },
+
+  // ══════════════════════════════════════════
+  // USUARIOS — ABM
+  // ══════════════════════════════════════════
+
+  /**
+   * Listar todos los usuarios del tenant
+   */
+  async getUsers(tenantId) {
+    const sb = getSupabase();
+    const { data, error } = await sb
+      .from('users')
+      .select('id, full_name, email, role, is_active, created_at')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: true });
+    return error ? { error } : { data };
+  },
+
+  /**
+   * Invitar un nuevo usuario al tenant
+   * 1. Crea el usuario en Auth (envía email de confirmación)
+   * 2. Restaura la sesión del admin
+   * 3. Inserta el registro en public.users
+   */
+  async inviteUser(tenantId, email, fullName, password, role) {
+    const sb = getSupabase();
+
+    // 1. Guardar sesión actual del admin
+    const { data: { session: adminSession } } = await sb.auth.getSession();
+
+    // 2. Crear usuario en Auth (Supabase envía email de confirmación si está habilitado)
+    const { data: authData, error: authError } = await sb.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } },
+    });
+    if (authError) return { error: authError };
+
+    // 3. Restaurar sesión del admin inmediatamente
+    if (adminSession) {
+      await sb.auth.setSession({
+        access_token : adminSession.access_token,
+        refresh_token: adminSession.refresh_token,
+      });
+    }
+
+    const authUserId = authData.user?.id;
+    if (!authUserId) return { error: { message: 'No se pudo obtener el ID del usuario creado.' } };
+
+    // 4. Insertar en public.users con el tenant del admin
+    const { data, error } = await sb
+      .from('users')
+      .insert({
+        tenant_id: tenantId,
+        auth_id  : authUserId,
+        email,
+        full_name: fullName,
+        role,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    return error ? { error } : { data };
+  },
+
+  /**
+   * Cambiar el rol de un usuario
+   */
+  async updateUserRole(userId, role) {
+    const sb = getSupabase();
+    const { data, error } = await sb
+      .from('users')
+      .update({ role })
+      .eq('id', userId)
+      .select('id, role')
+      .single();
+    return error ? { error } : { data };
+  },
+
+  /**
+   * Activar o desactivar un usuario
+   */
+  async toggleUserActive(userId, isActive) {
+    const sb = getSupabase();
+    const { data, error } = await sb
+      .from('users')
+      .update({ is_active: isActive })
+      .eq('id', userId)
+      .select('id, is_active')
+      .single();
+    return error ? { error } : { data };
+  },
+
+  /**
+   * Eliminar un usuario del tenant (solo el registro en public.users)
+   */
+  async deleteUser(userId) {
+    const sb = getSupabase();
+    const { error } = await sb.from('users').delete().eq('id', userId);
+    return { error };
+  },
 };
 
 // ══════════════════════════════════════════
