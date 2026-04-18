@@ -469,6 +469,58 @@ const JV_API = {
     const sb = getSupabase();
     sb.removeChannel(subscription);
   },
+
+  // ══════════════════════════════════════════
+  // KEYWORDS NLP — CRUD
+  // ══════════════════════════════════════════
+
+  async getKeywords(tenantId) {
+    const sb = getSupabase();
+    const { data, error } = await sb
+      .from('nlp_keywords')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('category')
+      .order('keyword');
+    return error ? { error } : { data };
+  },
+
+  async addKeyword(tenantId, keyword, category, scoreImpact) {
+    const sb = getSupabase();
+    const { data, error } = await sb
+      .from('nlp_keywords')
+      .insert({ tenant_id: tenantId, keyword: keyword.toLowerCase().trim(), category, score_impact: parseInt(scoreImpact) })
+      .select()
+      .single();
+    return error ? { error } : { data };
+  },
+
+  async deleteKeyword(id) {
+    const sb = getSupabase();
+    const { error } = await sb.from('nlp_keywords').delete().eq('id', id);
+    return { error };
+  },
+
+  async toggleKeyword(id, isActive) {
+    const sb = getSupabase();
+    const { data, error } = await sb
+      .from('nlp_keywords')
+      .update({ is_active: isActive })
+      .eq('id', id)
+      .select()
+      .single();
+    return error ? { error } : { data };
+  },
+
+  // ══════════════════════════════════════════
+  // CUENTA
+  // ══════════════════════════════════════════
+
+  async changePassword(newPassword) {
+    const sb = getSupabase();
+    const { data, error } = await sb.auth.updateUser({ password: newPassword });
+    return error ? { error } : { data };
+  },
 };
 
 // ══════════════════════════════════════════

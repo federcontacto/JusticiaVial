@@ -1,44 +1,50 @@
 /* ══════════════════════════════════════════════
-   JUSTICIAVIAL — Dashboard Controller
-   Conectado a Supabase — sin datos hardcodeados
+   JUSTICIAVIAL — Dashboard Pro Controller
    ══════════════════════════════════════════════ */
 
-(function() {
+(function () {
   'use strict';
 
   // ══════════════════════════════════════════
-  // ESTADO GLOBAL
+  // ESTADO
   // ══════════════════════════════════════════
   let currentUser   = null;
   let currentTenant = null;
   let leadsData     = [];
   let casesData     = [];
+  let keywordsData  = [];
+  let searchQuery   = '';
   let activeTab     = 'leads';
   let activeFilter  = 'todos';
   let realtimeSub   = null;
 
+  const PAGE_TITLES = {
+    leads    : 'Leads',
+    pipeline : 'Pipeline de litigios',
+    analytics: 'Analíticas',
+    config   : 'Configuración',
+  };
+
   const STAGES = {
-    extrajudicial : 'Reclamo extrajudicial',
-    mediacion     : 'Mediación',
-    demanda       : 'Demanda',
-    prueba        : 'Prueba',
-    sentencia     : 'Sentencia / Ejecución',
+    extrajudicial: 'Reclamo extrajudicial',
+    mediacion    : 'Mediación',
+    demanda      : 'Demanda',
+    prueba       : 'Prueba',
+    sentencia    : 'Sentencia / Ejecución',
   };
   const STAGE_KEYS = ['extrajudicial','mediacion','demanda','prueba','sentencia'];
-
-  // Mapeo DB → clave de pipeline
   const STAGE_DB_MAP = {
-    reclamo_extrajudicial : 'extrajudicial',
-    mediacion             : 'mediacion',
-    demanda               : 'demanda',
-    prueba                : 'prueba',
-    alegatos              : 'prueba',
-    sentencia             : 'sentencia',
-    ejecucion             : 'sentencia',
+    reclamo_extrajudicial: 'extrajudicial',
+    mediacion            : 'mediacion',
+    demanda              : 'demanda',
+    prueba               : 'prueba',
+    alegatos             : 'prueba',
+    sentencia            : 'sentencia',
+    ejecucion            : 'sentencia',
   };
 
   // ══════════════════════════════════════════
-  // INIT — Auth guard + carga de datos
+  // INIT
   // ══════════════════════════════════════════
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.dash-nav-item').forEach(item => {
@@ -50,48 +56,34 @@
   async function initDashboard() {
     showLoading(true);
 
-    // 1. Verificar sesión activa
     const session = await JV_API.getSession();
-    if (!session) {
-      window.location.href = 'login.html';
-      return;
-    }
+    if (!session) { window.location.href = 'login.html'; return; }
 
-    // 2. Cargar usuario y tenant
     currentUser = await JV_API.getCurrentUser();
-    if (!currentUser) {
-      // Auth OK pero sin registro en tabla users → redirigir
-      await JV_API.logout();
-      window.location.href = 'login.html';
-      return;
-    }
+    if (!currentUser) { await JV_API.logout(); window.location.href = 'login.html'; return; }
     currentTenant = currentUser.tenants;
 
-    // 3. Actualizar header con datos reales
+    // Header
     document.getElementById('tenantName').textContent = currentTenant?.name || 'Mi estudio';
     document.getElementById('userName').textContent   = currentUser.full_name;
-    const initials = currentUser.full_name
-      .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    document.getElementById('userRole').textContent   = currentUser.role;
+    const initials = currentUser.full_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
     document.getElementById('userAvatar').textContent = initials;
 
-    // 4. Cargar leads y casos en paralelo
     await Promise.all([loadLeads(), loadCases()]);
 
     showLoading(false);
-
-    // 5. Renderizar tab inicial
     switchTab('leads');
 
-    // 6. Suscribir a leads nuevos en tiempo real
-    realtimeSub = JV_API.subscribeToNewLeads(currentUser.tenant_id, (newLead) => {
-      leadsData.unshift(mapLead(newLead));
-      updateNavBadge(leadsData.length);
+    realtimeSub = JV_API.subscribeToNewLeads(currentUser.tenant_id, lead => {
+      leadsData.unshift(mapLead(lead));
+      updateLeadsBadge();
       if (activeTab === 'leads') renderLeadsPanel();
     });
   }
 
   async function loadLeads() {
-    const { data, error } = await JV_API.getLeads(currentUser.tenant_id, { limit: 100 });
+    const { data, error } = await JV_API.getLeads(currentUser.tenant_id, { limit: 200 });
     if (!error && data) leadsData = data.map(mapLead);
   }
 
@@ -100,8 +92,14 @@
     if (!error && data) casesData = data.map(mapCase);
   }
 
+  async function loadKeywords() {
+    const { data, error } = await JV_API.getKeywords(currentUser.tenant_id);
+    if (!error && data) keywordsData = data;
+    return keywordsData;
+  }
+
   // ══════════════════════════════════════════
-  // MAPEOS — Supabase → formato del dashboard
+  // MAPEOS
   // ══════════════════════════════════════════
   function mapLead(l) {
     return {
@@ -109,39 +107,36 @@
       name        : l.full_name,
       city        : l.city || '—',
       wa          : l.whatsapp,
-      age         : l.age || null,
+      age         : l.age,
       income      : l.monthly_income || 0,
       score       : l.score_total || 0,
       level       : l.score_level || 'bajo',
       status      : l.status || 'nuevo',
       min         : l.estimated_min || 0,
       max         : l.estimated_max || 0,
-      desc        : l.description || 'Sin descripción del caso.',
+      desc        : l.description || 'Sin descripción.',
       ai          : l.ai_summary || null,
       risks       : l.ai_risks || [],
       docs        : 0,
       date        : timeAgo(l.created_at),
-      injury      : l.had_surgery
-                      ? 'Con cirugía'
-                      : l.has_injuries ? 'Con lesiones' : 'Sin lesiones',
+      rawDate     : l.created_at,
+      injury      : l.had_surgery ? 'Con cirugía' : l.has_injuries ? 'Con lesiones' : 'Sin lesiones',
       insurer     : l.insurer_name || 'No identificada',
       policeReport: !!l.has_police_report,
       thirdParty  : !!l.has_third_party_data,
       sickDays    : l.sick_days || 0,
-      type        : formatAccidentType(l.accident_type),
+      type        : fmtAccidentType(l.accident_type),
     };
   }
 
   function mapCase(c) {
     return {
-      id      : c.id,
-      name    : c.client_name || c.case_title || '—',
-      stage   : STAGE_DB_MAP[c.stage] || 'extrajudicial',
-      amount  : c.estimated_min || 0,
-      date    : c.created_at
-                  ? new Date(c.created_at).toLocaleDateString('es-AR')
-                  : '—',
-      insurer : c.insurer_name || 'No identificada',
+      id     : c.id,
+      name   : c.client_name || c.case_title || '—',
+      stage  : STAGE_DB_MAP[c.stage] || 'extrajudicial',
+      amount : c.estimated_min || 0,
+      date   : c.created_at ? new Date(c.created_at).toLocaleDateString('es-AR') : '—',
+      insurer: c.insurer_name || 'No identificada',
     };
   }
 
@@ -150,144 +145,157 @@
   // ══════════════════════════════════════════
   function switchTab(tab) {
     activeTab = tab;
-
     document.querySelectorAll('.dash-nav-item').forEach(n =>
-      n.classList.toggle('active', n.dataset.tab === tab)
-    );
+      n.classList.toggle('active', n.dataset.tab === tab));
     document.querySelectorAll('.dash-panel').forEach(p =>
-      p.classList.toggle('active', p.id === 'panel-' + tab)
-    );
+      p.classList.toggle('active', p.id === 'panel-' + tab));
+    document.getElementById('pageTitle').textContent = PAGE_TITLES[tab] || tab;
+
+    // Reset search on tab change
+    const si = document.getElementById('searchInput');
+    if (si) si.value = '';
+    searchQuery = '';
+
+    // Show search only on leads
+    const sw = document.querySelector('.dash-search-wrap');
+    if (sw) sw.style.display = tab === 'leads' ? '' : 'none';
 
     switch (tab) {
-      case 'leads'   : renderLeadsPanel();    break;
-      case 'pipeline': renderPipelinePanel(); break;
-      case 'config'  : renderConfigPanel();   break;
+      case 'leads'    : renderLeadsPanel();    break;
+      case 'pipeline' : renderPipelinePanel(); break;
+      case 'analytics': renderAnalyticsPanel(); break;
+      case 'config'   : renderConfigPanel();   break;
     }
   }
 
   // ══════════════════════════════════════════
   // PANEL: LEADS
   // ══════════════════════════════════════════
+  function getFilteredLeads() {
+    let list = leadsData;
+    if (activeFilter !== 'todos') list = list.filter(l => l.level === activeFilter);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(l =>
+        l.name.toLowerCase().includes(q) ||
+        l.city.toLowerCase().includes(q) ||
+        (l.insurer && l.insurer.toLowerCase().includes(q)) ||
+        (l.desc && l.desc.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }
+
   function renderLeadsPanel() {
     const panel    = document.getElementById('panel-leads');
-    const filtered = activeFilter === 'todos'
-      ? leadsData
-      : leadsData.filter(l => l.level === activeFilter);
+    const filtered = getFilteredLeads();
+    const fmt      = JV_ENGINE.formatARS;
 
-    const fmt        = JV_ENGINE.formatARS;
-    const totalMin   = leadsData.reduce((a, l) => a + l.min, 0);
-    const altos      = leadsData.filter(l => l.level === 'alto').length;
-    const nuevos     = leadsData.filter(l => l.status === 'nuevo').length;
-    const avgScore   = leadsData.length
-      ? Math.round(leadsData.reduce((a, l) => a + l.score, 0) / leadsData.length)
-      : 0;
+    const altos    = leadsData.filter(l => l.level === 'alto').length;
+    const nuevos   = leadsData.filter(l => l.status === 'nuevo').length;
+    const avgScore = leadsData.length
+      ? Math.round(leadsData.reduce((a, l) => a + l.score, 0) / leadsData.length) : 0;
+    const totalMin = leadsData.reduce((a, l) => a + l.min, 0);
 
-    updateNavBadge(leadsData.length);
+    updateLeadsBadge();
 
     panel.innerHTML = `
       <div class="metrics-grid">
         <div class="metric-card">
+          <span class="metric-icon">📋</span>
           <div class="metric-label">Total de leads</div>
           <div class="metric-value">${leadsData.length}</div>
           <div class="metric-delta">${nuevos} sin contactar</div>
         </div>
         <div class="metric-card">
+          <span class="metric-icon">⭐</span>
           <div class="metric-label">Score promedio</div>
           <div class="metric-value">${avgScore}</div>
           <div class="metric-delta">sobre 100 puntos</div>
         </div>
         <div class="metric-card">
+          <span class="metric-icon">🔴</span>
           <div class="metric-label">Leads prioritarios</div>
           <div class="metric-value">${altos}</div>
-          <div class="metric-delta" style="color:var(--jv-success)">Score ≥ 75</div>
+          <div class="metric-delta metric-up">Score ≥ 75</div>
         </div>
         <div class="metric-card">
+          <span class="metric-icon">💰</span>
           <div class="metric-label">Monto potencial mín.</div>
-          <div class="metric-value" style="font-size:20px">${fmt(totalMin)}</div>
+          <div class="metric-value" style="font-size:22px">${fmt(totalMin)}</div>
           <div class="metric-delta">estimado acumulado</div>
         </div>
       </div>
 
       <div class="section-header">
-        <div class="section-title">Leads</div>
+        <div class="section-title">
+          Leads
+          ${searchQuery ? `<span style="font-size:13px;color:#94A3B8;font-weight:500"> — "${esc(searchQuery)}" (${filtered.length})</span>` : ''}
+        </div>
         <div class="filter-bar">
-          <button class="filter-chip ${activeFilter==='todos'?'active':''}"
-            onclick="JV_DASH.setFilter('todos')">Todos (${leadsData.length})</button>
-          <button class="filter-chip ${activeFilter==='alto'?'active':''}"
-            onclick="JV_DASH.setFilter('alto')">Alto (${leadsData.filter(l=>l.level==='alto').length})</button>
-          <button class="filter-chip ${activeFilter==='medio'?'active':''}"
-            onclick="JV_DASH.setFilter('medio')">Medio (${leadsData.filter(l=>l.level==='medio').length})</button>
-          <button class="filter-chip ${activeFilter==='bajo'?'active':''}"
-            onclick="JV_DASH.setFilter('bajo')">Bajo (${leadsData.filter(l=>l.level==='bajo').length})</button>
+          <button class="filter-chip ${activeFilter==='todos' ?'active':''}" onclick="JV_DASH.setFilter('todos')">Todos (${leadsData.length})</button>
+          <button class="filter-chip ${activeFilter==='alto'  ?'active':''}" onclick="JV_DASH.setFilter('alto')">🔴 Alto (${leadsData.filter(l=>l.level==='alto').length})</button>
+          <button class="filter-chip ${activeFilter==='medio' ?'active':''}" onclick="JV_DASH.setFilter('medio')">🟡 Medio (${leadsData.filter(l=>l.level==='medio').length})</button>
+          <button class="filter-chip ${activeFilter==='bajo'  ?'active':''}" onclick="JV_DASH.setFilter('bajo')">⚪ Bajo (${leadsData.filter(l=>l.level==='bajo').length})</button>
         </div>
       </div>
 
-      ${filtered.length === 0 ? renderEmptyLeads() : `
-        <div class="leads-table-wrap">
-          <div class="leads-table-scroll">
-            <table class="leads-table">
-              <thead>
-                <tr>
-                  <th>Lead</th>
-                  <th>Score</th>
-                  <th>Estado</th>
-                  <th>Estimado</th>
-                  <th>Descripción</th>
-                  <th style="text-align:center">Docs</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                ${filtered.map(l => `
-                  <tr data-id="${l.id}" onclick="JV_DASH.showDetail(this.dataset.id)" style="cursor:pointer">
-                    <td>
-                      <div class="lead-cell-name">${esc(l.name)}</div>
-                      <div class="lead-cell-city">${esc(l.city)} · ${l.date}</div>
-                    </td>
-                    <td><span class="badge badge-${l.level}">${l.score}/100</span></td>
-                    <td><span class="badge badge-${l.status}">${l.status}</span></td>
-                    <td>
-                      <div class="lead-cell-amount">${fmt(l.min)}</div>
-                      <div class="lead-cell-amount-max">a ${fmt(l.max)}</div>
-                    </td>
-                    <td><div class="lead-cell-summary">${esc(l.desc)}</div></td>
-                    <td class="lead-cell-docs">${l.docs}</td>
-                    <td>
-                      <button class="btn-wa-sm"
-                        onclick="event.stopPropagation(); window.open('https://wa.me/${waNumber(l.wa)}','_blank')">
-                        WA
-                      </button>
-                    </td>
+      ${filtered.length === 0
+        ? `<div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <div class="empty-state-title">${searchQuery ? 'Sin resultados' : 'No hay leads todavía'}</div>
+            <div class="empty-state-desc">${searchQuery
+              ? 'Probá con otro nombre o ciudad.'
+              : 'Cuando alguien use el calculador en la landing, aparecerá acá automáticamente.'}</div>
+          </div>`
+        : `<div class="leads-table-wrap">
+            <div class="leads-table-scroll">
+              <table class="leads-table">
+                <thead>
+                  <tr>
+                    <th>Lead</th>
+                    <th>Score</th>
+                    <th>Estado</th>
+                    <th>Estimado</th>
+                    <th>Descripción</th>
+                    <th style="text-align:center">Docs</th>
+                    <th></th>
                   </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `}
+                </thead>
+                <tbody>
+                  ${filtered.map(l => `
+                    <tr data-id="${l.id}" onclick="JV_DASH.showDetail(this.dataset.id)">
+                      <td>
+                        <div class="lead-cell-name">${esc(l.name)}</div>
+                        <div class="lead-cell-city">${esc(l.city)} · ${l.date}</div>
+                      </td>
+                      <td><span class="badge badge-${l.level}">${l.score}/100</span></td>
+                      <td><span class="badge badge-${l.status}">${l.status}</span></td>
+                      <td>
+                        <div class="lead-cell-amount">${fmt(l.min)}</div>
+                        <div class="lead-cell-amount-max">a ${fmt(l.max)}</div>
+                      </td>
+                      <td><div class="lead-cell-summary">${esc(l.desc)}</div></td>
+                      <td class="lead-cell-docs">${l.docs || '—'}</td>
+                      <td>
+                        <button class="btn-wa-sm" onclick="event.stopPropagation();window.open('https://wa.me/${waNum(l.wa)}','_blank')">
+                          💬 WA
+                        </button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>`
+      }
       <div id="leadDetailArea"></div>
     `;
   }
 
-  function renderEmptyLeads() {
-    return `
-      <div style="text-align:center;padding:60px 20px;color:var(--jv-gray-400)">
-        <div style="font-size:48px;margin-bottom:16px">📋</div>
-        <div style="font-size:18px;font-weight:600;color:var(--jv-gray-600);margin-bottom:8px">
-          Todavía no hay leads
-        </div>
-        <div style="font-size:14px">
-          Cuando alguien complete el calculador en la landing, aparecerá acá automáticamente.
-        </div>
-      </div>
-    `;
-  }
-
-  // ── Detalle de lead ──
   function showLeadDetail(id) {
     const l = leadsData.find(x => x.id === id);
     if (!l) return;
-
     const fmt  = JV_ENGINE.formatARS;
     const area = document.getElementById('leadDetailArea');
 
@@ -302,46 +310,19 @@
             <span class="badge badge-${l.level}" style="font-size:13px;padding:6px 14px">
               ${l.score}/100 — ${l.level.toUpperCase()}
             </span>
-            <button class="btn btn-outline btn-sm"
-              onclick="document.getElementById('leadDetailArea').innerHTML=''">
-              Cerrar
-            </button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('leadDetailArea').innerHTML=''">✕ Cerrar</button>
           </div>
         </div>
 
         <div class="lead-fields-grid">
-          <div class="lead-field">
-            <div class="lead-field-label">Edad</div>
-            <div class="lead-field-value">${l.age ? l.age + ' años' : '—'}</div>
-          </div>
-          <div class="lead-field">
-            <div class="lead-field-label">Ingreso mensual</div>
-            <div class="lead-field-value">${l.income ? fmt(l.income) : '—'}</div>
-          </div>
-          <div class="lead-field">
-            <div class="lead-field-label">Lesión</div>
-            <div class="lead-field-value">${esc(l.injury)}</div>
-          </div>
-          <div class="lead-field">
-            <div class="lead-field-label">Aseguradora</div>
-            <div class="lead-field-value">${esc(l.insurer)}</div>
-          </div>
-          <div class="lead-field">
-            <div class="lead-field-label">Acta policial</div>
-            <div class="lead-field-value">${l.policeReport ? '✓ Sí' : '✗ No'}</div>
-          </div>
-          <div class="lead-field">
-            <div class="lead-field-label">Datos del tercero</div>
-            <div class="lead-field-value">${l.thirdParty ? '✓ Sí' : '✗ No'}</div>
-          </div>
-          <div class="lead-field">
-            <div class="lead-field-label">Días de baja</div>
-            <div class="lead-field-value">${l.sickDays} días</div>
-          </div>
-          <div class="lead-field">
-            <div class="lead-field-label">WhatsApp</div>
-            <div class="lead-field-value">${esc(l.wa)}</div>
-          </div>
+          ${field('Edad', l.age ? l.age + ' años' : '—')}
+          ${field('Ingreso mensual', l.income ? fmt(l.income) : '—')}
+          ${field('Lesión', l.injury)}
+          ${field('Aseguradora', l.insurer)}
+          ${field('Acta policial', l.policeReport ? '✓ Sí' : '✗ No')}
+          ${field('Datos del tercero', l.thirdParty ? '✓ Sí' : '✗ No')}
+          ${field('Días de baja', l.sickDays + ' días')}
+          ${field('WhatsApp', l.wa)}
         </div>
 
         <div class="lead-description">
@@ -351,14 +332,10 @@
 
         ${l.ai ? `
           <div class="ai-analysis">
-            <div class="ai-analysis-title">🤖 Análisis de IA</div>
+            <div class="ai-analysis-title">🤖 Análisis IA</div>
             <div class="ai-analysis-text">${esc(l.ai)}</div>
-            ${l.risks.length ? `
-              <div class="ai-risks">
-                ${l.risks.map(r => `<span class="ai-risk-tag">⚠ ${esc(r)}</span>`).join('')}
-              </div>` : ''}
-          </div>
-        ` : ''}
+            ${l.risks.length ? `<div class="ai-risks">${l.risks.map(r=>`<span class="ai-risk-tag">⚠ ${esc(r)}</span>`).join('')}</div>` : ''}
+          </div>` : ''}
 
         <div class="lead-estimate-box">
           <div class="lead-estimate-label">Indemnización estimada</div>
@@ -366,37 +343,33 @@
         </div>
 
         <div class="lead-action-bar">
-          <button class="btn btn-success btn-sm"
-            data-id="${l.id}"
-            onclick="JV_DASH.acceptLead(this.dataset.id, this)">
-            ✓ Aceptar caso
-          </button>
-          <button class="btn btn-outline btn-sm" style="color:var(--jv-teal)"
-            onclick="JV_DASH.contactLead('${l.id}')">
-            ℹ Marcar como contactado
-          </button>
-          <button class="btn btn-danger-outline btn-sm"
-            data-id="${l.id}"
-            onclick="JV_DASH.rejectLead(this.dataset.id)">
-            ✕ Rechazar
-          </button>
+          <button class="btn btn-success btn-sm" data-id="${l.id}"
+            onclick="JV_DASH.acceptLead(this.dataset.id, this)">✓ Aceptar caso</button>
+          <button class="btn btn-outline btn-sm" style="color:#2E86AB"
+            data-id="${l.id}" onclick="JV_DASH.contactLead(this.dataset.id)">✉ Marcar contactado</button>
+          <button class="btn btn-danger-outline btn-sm" data-id="${l.id}"
+            onclick="JV_DASH.rejectLead(this.dataset.id)">✕ Rechazar</button>
           <button class="btn btn-whatsapp btn-sm"
-            onclick="window.open('https://wa.me/${waNumber(l.wa)}','_blank')">
-            WhatsApp
-          </button>
+            onclick="window.open('https://wa.me/${waNum(l.wa)}','_blank')">💬 WhatsApp</button>
         </div>
       </div>
     `;
-
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function field(label, value) {
+    return `<div class="lead-field">
+      <div class="lead-field-label">${label}</div>
+      <div class="lead-field-value">${esc(String(value))}</div>
+    </div>`;
   }
 
   // ══════════════════════════════════════════
   // PANEL: PIPELINE
   // ══════════════════════════════════════════
   function renderPipelinePanel() {
-    const panel  = document.getElementById('panel-pipeline');
-    const fmt    = JV_ENGINE.formatARS;
+    const panel = document.getElementById('panel-pipeline');
+    const fmt   = JV_ENGINE.formatARS;
 
     const grouped = {};
     STAGE_KEYS.forEach(s => grouped[s] = []);
@@ -404,178 +377,563 @@
 
     const totalAmount = casesData.reduce((a, c) => a + c.amount, 0);
     const inDemanda   = casesData.filter(c => c.stage === 'demanda').length;
+    const honPot      = totalAmount * 0.20;
 
     panel.innerHTML = `
-      <div class="metrics-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="metrics-grid" style="grid-template-columns:repeat(3,1fr)">
         <div class="metric-card">
+          <span class="metric-icon">⚖️</span>
           <div class="metric-label">Casos activos</div>
           <div class="metric-value">${casesData.length}</div>
         </div>
         <div class="metric-card">
+          <span class="metric-icon">⚡</span>
           <div class="metric-label">En demanda</div>
           <div class="metric-value">${inDemanda}</div>
         </div>
         <div class="metric-card">
+          <span class="metric-icon">💼</span>
           <div class="metric-label">Honorarios potenciales (20%)</div>
-          <div class="metric-value" style="font-size:20px">${fmt(totalAmount * 0.2)}</div>
+          <div class="metric-value" style="font-size:20px">${fmt(honPot)}</div>
         </div>
       </div>
 
-      <div class="section-title mb-sm">Pipeline de litigios</div>
-
-      ${casesData.length === 0 ? `
-        <div style="text-align:center;padding:60px 20px;color:var(--jv-gray-400)">
-          <div style="font-size:48px;margin-bottom:16px">⚖️</div>
-          <div style="font-size:18px;font-weight:600;color:var(--jv-gray-600);margin-bottom:8px">
-            No hay casos activos
-          </div>
-          <div style="font-size:14px">
-            Aceptá un lead desde la pestaña Leads para crear el primer caso.
-          </div>
-        </div>
-      ` : `
-        <div class="kanban-board">
-          ${STAGE_KEYS.map(s => `
-            <div class="kanban-column">
-              <div class="kanban-col-header">
-                <div class="kanban-col-title">${STAGES[s]}</div>
-                <div class="kanban-col-count">${grouped[s].length}</div>
-              </div>
-              ${grouped[s].map(c => `
-                <div class="kanban-card">
-                  <div class="kc-name">${esc(c.name)}</div>
-                  <div class="kc-sub">${esc(c.insurer)}</div>
-                  <div class="kc-footer">
-                    <div class="kc-amount">${fmt(c.amount)}</div>
-                    <div class="kc-date">${c.date}</div>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          `).join('')}
-        </div>
-      `}
+      ${casesData.length === 0
+        ? `<div class="empty-state">
+            <div class="empty-state-icon">⚖️</div>
+            <div class="empty-state-title">No hay casos activos</div>
+            <div class="empty-state-desc">Aceptá un lead desde la pestaña Leads para crear el primer caso.</div>
+          </div>`
+        : `<div class="section-title mb-md">Pipeline de litigios</div>
+           <div class="kanban-scroll-wrap">
+             <div class="kanban-board">
+               ${STAGE_KEYS.map(s => `
+                 <div class="kanban-column">
+                   <div class="kanban-col-header">
+                     <div class="kanban-col-title">${STAGES[s]}</div>
+                     <div class="kanban-col-count">${grouped[s].length}</div>
+                   </div>
+                   ${grouped[s].map(c => `
+                     <div class="kanban-card">
+                       <div class="kc-name">${esc(c.name)}</div>
+                       <div class="kc-sub">${esc(c.insurer)}</div>
+                       <div class="kc-footer">
+                         <div class="kc-amount">${fmt(c.amount)}</div>
+                         <div class="kc-date">${c.date}</div>
+                       </div>
+                     </div>
+                   `).join('')}
+                 </div>
+               `).join('')}
+             </div>
+           </div>`
+      }
     `;
+  }
+
+  // ══════════════════════════════════════════
+  // PANEL: ANALYTICS
+  // ══════════════════════════════════════════
+  function renderAnalyticsPanel() {
+    const panel = document.getElementById('panel-analytics');
+    const fmt   = JV_ENGINE.formatARS;
+
+    const total     = leadsData.length;
+    const altos     = leadsData.filter(l => l.level === 'alto').length;
+    const medios    = leadsData.filter(l => l.level === 'medio').length;
+    const bajos     = leadsData.filter(l => l.level === 'bajo').length;
+    const aceptados = leadsData.filter(l => l.status === 'aceptado').length;
+    const contactados = leadsData.filter(l => ['contactado','evaluacion','aceptado'].includes(l.status)).length;
+    const convRate  = total ? Math.round(aceptados / total * 100) : 0;
+    const contRate  = total ? Math.round(contactados / total * 100) : 0;
+    const totalMin  = leadsData.reduce((a, l) => a + l.min, 0);
+    const avgScore  = total ? Math.round(leadsData.reduce((a, l) => a + l.score, 0) / total) : 0;
+
+    // By month (last 6)
+    const monthBuckets = buildMonthlyBuckets();
+    const maxMonth     = Math.max(...monthBuckets.map(m => m.count), 1);
+    const barChartHtml = monthBuckets.map(m => {
+      const pct = Math.round((m.count / maxMonth) * 96) + 4;
+      return `
+        <div class="bar-group">
+          ${m.count > 0 ? `<div class="bar-value">${m.count}</div>` : '<div class="bar-value" style="opacity:0">0</div>'}
+          <div class="bar-fill" style="height:${pct}%"></div>
+          <div class="bar-label">${m.label}</div>
+        </div>
+      `;
+    }).join('');
+
+    // By insurer
+    const insurerMap = {};
+    leadsData.forEach(l => {
+      const k = l.insurer || 'No identificada';
+      insurerMap[k] = (insurerMap[k] || 0) + 1;
+    });
+    const topInsurers = Object.entries(insurerMap).sort((a,b) => b[1]-a[1]).slice(0,5);
+    const maxIns = topInsurers[0]?.[1] || 1;
+
+    panel.innerHTML = `
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-icon">📋</span>
+          <div class="metric-label">Total leads</div>
+          <div class="metric-value">${total}</div>
+          <div class="metric-delta">${aceptados} aceptados</div>
+        </div>
+        <div class="metric-card">
+          <span class="metric-icon">📈</span>
+          <div class="metric-label">Score promedio</div>
+          <div class="metric-value">${avgScore}</div>
+          <div class="metric-delta">sobre 100</div>
+        </div>
+        <div class="metric-card">
+          <span class="metric-icon">✅</span>
+          <div class="metric-label">Tasa de conversión</div>
+          <div class="metric-value">${convRate}%</div>
+          <div class="metric-delta metric-up">${aceptados} casos creados</div>
+        </div>
+        <div class="metric-card">
+          <span class="metric-icon">💰</span>
+          <div class="metric-label">Cartera potencial mín.</div>
+          <div class="metric-value" style="font-size:20px">${fmt(totalMin)}</div>
+          <div class="metric-delta">leads activos</div>
+        </div>
+      </div>
+
+      <div class="analytics-grid">
+
+        <!-- Leads por mes -->
+        <div class="analytics-card">
+          <div class="analytics-title">Leads por mes (últimos 6 meses)</div>
+          ${total === 0
+            ? '<div style="color:#94A3B8;font-size:13px;text-align:center;padding:30px 0">Sin datos aún</div>'
+            : `<div class="bar-chart">${barChartHtml}</div>`}
+        </div>
+
+        <!-- Distribución por score -->
+        <div class="analytics-card">
+          <div class="analytics-title">Distribución por calidad</div>
+          <div class="score-dist">
+            <div class="score-row">
+              <div class="score-row-label">🔴 Alto (≥75)</div>
+              <div class="score-bar-wrap">
+                <div class="score-bar-fill score-bar-alto" style="width:${total?Math.round(altos/total*100):0}%"></div>
+              </div>
+              <div class="score-row-count">${altos}</div>
+            </div>
+            <div class="score-row">
+              <div class="score-row-label">🟡 Medio (40-74)</div>
+              <div class="score-bar-wrap">
+                <div class="score-bar-fill score-bar-medio" style="width:${total?Math.round(medios/total*100):0}%"></div>
+              </div>
+              <div class="score-row-count">${medios}</div>
+            </div>
+            <div class="score-row">
+              <div class="score-row-label">⚪ Bajo (&lt;40)</div>
+              <div class="score-bar-wrap">
+                <div class="score-bar-fill score-bar-bajo" style="width:${total?Math.round(bajos/total*100):0}%"></div>
+              </div>
+              <div class="score-row-count">${bajos}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conversión -->
+        <div class="analytics-card">
+          <div class="analytics-title">Embudo de conversión</div>
+          <div class="conv-stats">
+            <div class="conv-stat">
+              <div class="conv-stat-value">${total}</div>
+              <div class="conv-stat-label">Leads totales</div>
+            </div>
+            <div class="conv-stat">
+              <div class="conv-stat-value" style="color:#2E86AB">${contRate}%</div>
+              <div class="conv-stat-label">Contactados</div>
+            </div>
+            <div class="conv-stat">
+              <div class="conv-stat-value" style="color:#27AE60">${convRate}%</div>
+              <div class="conv-stat-label">Convertidos</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top aseguradoras -->
+        <div class="analytics-card">
+          <div class="analytics-title">Top aseguradoras en leads</div>
+          ${topInsurers.length === 0
+            ? '<div style="color:#94A3B8;font-size:13px;text-align:center;padding:20px 0">Sin datos</div>'
+            : `<div class="mini-list">
+                ${topInsurers.map(([name, count], i) => `
+                  <div class="mini-list-row">
+                    <div class="mini-list-rank">${i+1}</div>
+                    <div class="mini-list-label">${esc(name)}</div>
+                    <div class="mini-list-bar-wrap">
+                      <div class="mini-list-bar-fill" style="width:${Math.round(count/maxIns*100)}%"></div>
+                    </div>
+                    <div class="mini-list-count">${count}</div>
+                  </div>
+                `).join('')}
+              </div>`}
+        </div>
+
+      </div>
+    `;
+  }
+
+  function buildMonthlyBuckets() {
+    const now = new Date();
+    const buckets = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      buckets.push({
+        label: d.toLocaleDateString('es-AR', { month: 'short' }),
+        year : d.getFullYear(),
+        month: d.getMonth(),
+        count: 0,
+      });
+    }
+    leadsData.forEach(l => {
+      if (!l.rawDate) return;
+      const d = new Date(l.rawDate);
+      const b = buckets.find(m => m.year === d.getFullYear() && m.month === d.getMonth());
+      if (b) b.count++;
+    });
+    return buckets;
   }
 
   // ══════════════════════════════════════════
   // PANEL: CONFIG
   // ══════════════════════════════════════════
-  function renderConfigPanel() {
+  async function renderConfigPanel() {
     const panel = document.getElementById('panel-config');
-    const cfg   = JV_CONFIG;
+    panel.innerHTML = `<div style="color:#94A3B8;padding:20px 0">Cargando configuración...</div>`;
 
-    const kwRows = cfg.keywords.slice(0, 15).map(kw => `
+    await loadKeywords();
+
+    const t   = currentTenant || {};
+    const fc  = t.formula_config  || JV_CONFIG.formula;
+    const sc  = t.scoring_config  || {};
+    const lt  = t.landing_texts   || {};
+    const wa  = t.wa_templates    || {};
+
+    panel.innerHTML = `<div class="config-sections">
+
+      ${accordion('studio', '🏢', 'Datos del estudio', 'Nombre, WhatsApp, dirección y matrícula', `
+        <div class="config-row-2">
+          <div class="config-field">
+            <label class="config-field-label">Nombre del estudio</label>
+            <input id="cf-nombre" type="text" value="${esc(t.name||'')}">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Email de contacto</label>
+            <input id="cf-email" type="email" value="${esc(t.email||'')}">
+          </div>
+        </div>
+        <div class="config-row-2">
+          <div class="config-field">
+            <label class="config-field-label">WhatsApp (solo números, con código país)</label>
+            <input id="cf-wa" type="text" value="${esc(t.whatsapp||'')}" placeholder="5491112345678">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Teléfono</label>
+            <input id="cf-tel" type="text" value="${esc(t.phone||'')}">
+          </div>
+        </div>
+        <div class="config-row-2">
+          <div class="config-field">
+            <label class="config-field-label">Dirección</label>
+            <input id="cf-dir" type="text" value="${esc(t.address||'')}">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Ciudad</label>
+            <input id="cf-ciudad" type="text" value="${esc(t.city||'')}">
+          </div>
+        </div>
+        <div class="config-row-2">
+          <div class="config-field">
+            <label class="config-field-label">Jurisdicción</label>
+            <input id="cf-jur" type="text" value="${esc(t.jurisdiction||'CABA')}">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Matrícula profesional</label>
+            <input id="cf-mat" type="text" value="${esc(t.matricula||'')}">
+          </div>
+        </div>
+        <div class="config-save-bar">
+          <button class="btn btn-teal btn-sm" onclick="JV_DASH.saveStudio()">Guardar datos</button>
+          <span class="config-save-msg" id="msg-studio">✓ Guardado</span>
+        </div>
+      `)}
+
+      ${accordion('formula', '⚖️', 'Fórmula Vuoto', 'Coeficientes de cálculo de indemnizaciones', `
+        <div class="config-section-label">Coeficientes principales</div>
+        <div class="config-row-3">
+          <div class="config-field">
+            <label class="config-field-label">Coeficiente Vuoto</label>
+            <input id="cf-vuoto" type="number" step="0.01" value="${fc.coeficienteVuoto||1.65}">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Edad de jubilación</label>
+            <input id="cf-jubilacion" type="number" step="1" value="${fc.edadJubilacion||65}">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Coef. lucro cesante</label>
+            <input id="cf-lucro" type="number" step="0.05" value="${fc.coeficienteLucroCesante||1.10}">
+          </div>
+        </div>
+        <div class="config-section-label">Daños adicionales</div>
+        <div class="config-row-4">
+          <div class="config-field">
+            <label class="config-field-label">% Daño moral</label>
+            <input id="cf-moral" type="number" step="1" value="${Math.round((fc.porcentajeDanoMoral||0.30)*100)}">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">% Daño estético</label>
+            <input id="cf-estetico" type="number" step="1" value="${Math.round((fc.porcentajeDanoEstetico||0.08)*100)}">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Gastos médicos c/cirugía</label>
+            <input id="cf-gcir" type="number" step="50000" value="${fc.gastosMedicosCirugia||350000}">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Gastos médicos leve</label>
+            <input id="cf-glev" type="number" step="10000" value="${fc.gastosMedicosLeve||120000}">
+          </div>
+        </div>
+        <div class="config-section-label">Factores de rango (mín / máx del estimado)</div>
+        <div class="config-row-2" style="max-width:380px">
+          <div class="config-field">
+            <label class="config-field-label">Factor mínimo</label>
+            <input id="cf-fmin" type="number" step="0.05" value="${fc.factorMinimo||0.70}">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Factor máximo</label>
+            <input id="cf-fmax" type="number" step="0.05" value="${fc.factorMaximo||1.40}">
+          </div>
+        </div>
+        <div class="config-section-label">Tabla de incapacidad (%)</div>
+        <div class="config-row-3">
+          ${incapRow('cf-ic-leve',      'Leve',       (fc.tablaIncapacidad?.leve     ||0.08)*100)}
+          ${incapRow('cf-ic-moderada',  'Moderada',   (fc.tablaIncapacidad?.moderada  ||0.15)*100)}
+          ${incapRow('cf-ic-grave',     'Grave',      (fc.tablaIncapacidad?.grave     ||0.30)*100)}
+          ${incapRow('cf-ic-muygrave',  'Muy grave',  (fc.tablaIncapacidad?.muyGrave  ||0.50)*100)}
+          ${incapRow('cf-ic-fallec',    'Fallecimiento',(fc.tablaIncapacidad?.fallecimiento||1.0)*100)}
+        </div>
+        <div class="config-save-bar">
+          <button class="btn btn-teal btn-sm" onclick="JV_DASH.saveFormula()">Guardar fórmula</button>
+          <span class="config-save-msg" id="msg-formula">✓ Guardado</span>
+        </div>
+      `)}
+
+      ${accordion('scoring', '🎯', 'Pesos de scoring', 'Puntos por cada factor de calidad del lead', `
+        <div class="config-section-label">Puntos por factor</div>
+        <div class="config-row-3">
+          ${scoreRow('cf-sc-lesiones',  'Lesiones graves',   sc.lesionesGraves           ||15)}
+          ${scoreRow('cf-sc-cirugia',   'Cirugía',           sc.cirugia                  ||15)}
+          ${scoreRow('cf-sc-aseg',      'Aseguradora ident.',sc.aseguradoraIdentificada   ||20)}
+          ${scoreRow('cf-sc-tercero',   'Tercero ident.',    sc.terceroIdentificado       ||15)}
+          ${scoreRow('cf-sc-acta',      'Acta policial',     sc.actaPolicial              ||15)}
+          ${scoreRow('cf-sc-ingreso',   'Ingreso alto',      sc.ingresoAlto               ||10)}
+          ${scoreRow('cf-sc-edad',      'Edad productiva',   sc.edadProductiva            ||5)}
+        </div>
+        <div class="config-section-label">Umbrales de clasificación</div>
+        <div class="config-row-3" style="max-width:480px">
+          <div class="config-field">
+            <label class="config-field-label">Umbral ALTO (≥)</label>
+            <input id="cf-sc-ualto" type="number" step="1" value="${sc.umbrales?.alto||75}">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Umbral MEDIO (≥)</label>
+            <input id="cf-sc-umedio" type="number" step="1" value="${sc.umbrales?.medio||40}">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Ingreso "alto" (ARS)</label>
+            <input id="cf-sc-umbingreso" type="number" step="50000" value="${sc.umbralIngresoAlto||400000}">
+          </div>
+        </div>
+        <div class="config-save-bar">
+          <button class="btn btn-teal btn-sm" onclick="JV_DASH.saveScoring()">Guardar scoring</button>
+          <span class="config-save-msg" id="msg-scoring">✓ Guardado</span>
+        </div>
+      `)}
+
+      ${accordion('keywords', '🔤', 'Keywords NLP', 'Palabras clave para scoring automático de descripciones', renderKeywordsBody())}
+
+      ${accordion('whatsapp', '💬', 'Mensajes de WhatsApp', 'Templates para contactar leads automáticamente', `
+        <div class="wa-template-wrap">
+          <div class="wa-template-label">Mensaje del calculador (lo envía el lead)</div>
+          <textarea id="cf-wa-calc">${esc(wa.leadCalculador||JV_CONFIG.mensajes?.leadCalculador||'')}</textarea>
+        </div>
+        <div class="wa-template-wrap">
+          <div class="wa-template-label">Mensaje de bienvenida (lo envía el estudio)</div>
+          <textarea id="cf-wa-bienvenida">${esc(wa.bienvenida||JV_CONFIG.mensajes?.bienvenida||'')}</textarea>
+        </div>
+        <div class="wa-template-wrap">
+          <div class="wa-template-label">Mensaje de seguimiento</div>
+          <textarea id="cf-wa-seguimiento">${esc(wa.seguimiento||JV_CONFIG.mensajes?.seguimiento||'')}</textarea>
+        </div>
+        <div class="wa-vars">
+          Variables disponibles: <code>{nombre}</code> <code>{monto_min}</code> <code>{monto_max}</code> <code>{ciudad}</code> <code>{score}</code>
+        </div>
+        <div class="config-save-bar">
+          <button class="btn btn-teal btn-sm" onclick="JV_DASH.saveWA()">Guardar mensajes</button>
+          <span class="config-save-msg" id="msg-wa">✓ Guardado</span>
+        </div>
+      `)}
+
+      ${accordion('landing', '📄', 'Textos de la landing', 'Títulos, subtítulos y disclaimer de la página pública', `
+        <div class="config-field">
+          <label class="config-field-label">Título principal (Hero)</label>
+          <input id="cf-lt-titulo" type="text" value="${esc(lt.heroTitulo||'')}">
+        </div>
+        <div class="config-field">
+          <label class="config-field-label">Subtítulo</label>
+          <input id="cf-lt-sub" type="text" value="${esc(lt.heroSubtitulo||'')}">
+        </div>
+        <div class="config-field">
+          <label class="config-field-label">Botón principal (CTA)</label>
+          <input id="cf-lt-cta" type="text" value="${esc(lt.heroCta||'')}">
+        </div>
+        <div class="config-field">
+          <label class="config-field-label">Disclaimer legal</label>
+          <textarea id="cf-lt-disc">${esc(lt.disclaimer||'')}</textarea>
+        </div>
+        <div class="config-save-bar">
+          <button class="btn btn-teal btn-sm" onclick="JV_DASH.saveLanding()">Guardar textos</button>
+          <span class="config-save-msg" id="msg-landing">✓ Guardado</span>
+        </div>
+      `)}
+
+      ${accordion('cuenta', '👤', 'Mi cuenta', 'Cambiar contraseña y datos de acceso', `
+        <div class="password-form">
+          <div class="config-field">
+            <label class="config-field-label">Nueva contraseña</label>
+            <input id="cf-pass1" type="password" placeholder="Mínimo 8 caracteres">
+          </div>
+          <div class="config-field">
+            <label class="config-field-label">Confirmar nueva contraseña</label>
+            <input id="cf-pass2" type="password" placeholder="Repetir contraseña">
+          </div>
+          <div class="config-save-bar">
+            <button class="btn btn-teal btn-sm" onclick="JV_DASH.changePassword()">Cambiar contraseña</button>
+            <span class="config-save-msg" id="msg-pass">✓ Contraseña actualizada</span>
+          </div>
+        </div>
+      `)}
+
+    </div>`;
+  }
+
+  function accordion(id, emoji, title, sub, body) {
+    return `
+      <div class="config-accordion" id="acc-${id}">
+        <div class="config-accordion-header" onclick="JV_DASH.toggleAccordion('${id}')">
+          <div class="config-accordion-left">
+            <div class="config-accordion-emoji">${emoji}</div>
+            <div>
+              <div class="config-accordion-title">${title}</div>
+              <div class="config-accordion-sub">${sub}</div>
+            </div>
+          </div>
+          <span class="config-accordion-chevron" id="chevron-${id}">▼</span>
+        </div>
+        <div class="config-accordion-body" id="body-${id}">
+          <div style="padding-top:14px">${body}</div>
+        </div>
+      </div>`;
+  }
+
+  function incapRow(id, label, val) {
+    return `<div class="config-field">
+      <label class="config-field-label">${label} (%)</label>
+      <input id="${id}" type="number" step="1" min="0" max="100" value="${Math.round(val)}">
+    </div>`;
+  }
+
+  function scoreRow(id, label, val) {
+    return `<div class="config-field">
+      <label class="config-field-label">${label}</label>
+      <input id="${id}" type="number" step="1" min="0" value="${val}">
+    </div>`;
+  }
+
+  function renderKeywordsBody() {
+    const rows = keywordsData.map(kw => `
       <tr>
-        <td>${esc(kw.palabra)}</td>
-        <td><span class="kw-category kw-cat-${kw.categoria}">${kw.categoria}</span></td>
-        <td style="font-weight:600;color:${kw.impacto>0?'var(--jv-success)':'var(--jv-danger)'}">
-          ${kw.impacto > 0 ? '+' : ''}${kw.impacto}
+        <td>${esc(kw.keyword)}</td>
+        <td><span class="kw-category kw-cat-${kw.category}">${kw.category}</span></td>
+        <td class="${kw.score_impact >= 0 ? 'kw-impact-pos' : 'kw-impact-neg'}">
+          ${kw.score_impact >= 0 ? '+' : ''}${kw.score_impact}
+        </td>
+        <td style="text-align:center">
+          <span style="font-size:11px;color:${kw.is_active?'#27AE60':'#94A3B8'};font-weight:700">
+            ${kw.is_active ? '● Activa' : '○ Inactiva'}
+          </span>
+        </td>
+        <td>
+          <button class="btn-icon-del" data-id="${kw.id}" onclick="JV_DASH.deleteKeyword(this.dataset.id)">🗑</button>
         </td>
       </tr>
     `).join('');
 
-    panel.innerHTML = `
-      <div class="section-title mb-lg">Panel de configuración</div>
-
-      <div class="config-card">
-        <div class="config-title">Coeficientes de indemnización</div>
-        <div class="config-row">
-          <span class="config-label">Coeficiente Vuoto</span>
-          <div><input class="config-input" type="number" value="${cfg.formula.coeficienteVuoto}" step="0.01"></div>
-        </div>
-        <div class="config-row">
-          <span class="config-label">% Daño moral sobre patrimonial</span>
-          <div><input class="config-input" type="number" value="${Math.round(cfg.formula.porcentajeDanoMoral*100)}" step="1"><span class="config-suffix">%</span></div>
-        </div>
-        <div class="config-row">
-          <span class="config-label">Factor mínimo (rango)</span>
-          <div><input class="config-input" type="number" value="${cfg.formula.factorMinimo}" step="0.05"></div>
-        </div>
-        <div class="config-row">
-          <span class="config-label">Factor máximo (rango)</span>
-          <div><input class="config-input" type="number" value="${cfg.formula.factorMaximo}" step="0.05"></div>
-        </div>
-        <div class="config-row">
-          <span class="config-label">Gastos médicos — con cirugía</span>
-          <div><input class="config-input" type="number" value="${cfg.formula.gastosMedicosCirugia}" step="10000"><span class="config-suffix">ARS</span></div>
-        </div>
-        <div class="config-row">
-          <span class="config-label">Gastos médicos — lesión leve</span>
-          <div><input class="config-input" type="number" value="${cfg.formula.gastosMedicosLeve}" step="10000"><span class="config-suffix">ARS</span></div>
-        </div>
-        <div style="margin-top:14px">
-          <button class="btn btn-teal btn-sm">Guardar cambios</button>
-          <button class="btn btn-outline btn-sm">Restaurar valores</button>
-        </div>
-      </div>
-
-      <div class="config-card">
-        <div class="config-title">Diccionario NLP de keywords</div>
+    return `
+      <div style="max-height:320px;overflow-y:auto;border:1px solid #E2E8F0;border-radius:8px;margin-bottom:12px">
         <table class="kw-table">
-          <thead><tr><th>Keyword</th><th>Categoría</th><th>Impacto</th></tr></thead>
-          <tbody>${kwRows}</tbody>
+          <thead>
+            <tr>
+              <th>Keyword</th>
+              <th>Categoría</th>
+              <th>Impacto</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="kw-tbody">
+            ${rows.length ? rows : '<tr><td colspan="5" style="text-align:center;color:#94A3B8;padding:20px">No hay keywords cargadas</td></tr>'}
+          </tbody>
         </table>
-        <div style="margin-top:12px;display:flex;gap:8px">
-          <button class="btn btn-outline btn-sm">+ Agregar keyword</button>
-          <button class="btn btn-outline btn-sm" style="color:var(--jv-gray-400)">Restaurar predeterminados</button>
-        </div>
       </div>
 
-      <div class="config-card">
-        <div class="config-title">Mensajes de WhatsApp</div>
-        <div class="wa-template">
-          <div class="wa-template-label">Mensaje de bienvenida al lead</div>
-          <textarea>${esc(cfg.mensajes.bienvenida)}</textarea>
-        </div>
-        <div class="wa-template">
-          <div class="wa-template-label">Mensaje de seguimiento</div>
-          <textarea>${esc(cfg.mensajes.seguimiento)}</textarea>
-        </div>
-        <div class="wa-vars">
-          Variables: <code>{nombre}</code> <code>{monto_min}</code> <code>{monto_max}</code> <code>{ciudad}</code>
-        </div>
-        <div style="margin-top:14px">
-          <button class="btn btn-teal btn-sm">Guardar mensajes</button>
-        </div>
+      <div style="font-size:12px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">
+        + Agregar keyword
       </div>
-
-      <div class="config-card">
-        <div class="config-title">Datos del estudio</div>
-        <div class="landing-field">
-          <div class="landing-field-label">Nombre del estudio</div>
-          <input type="text" value="${esc(currentTenant?.name || '')}">
+      <div class="kw-add-form">
+        <div>
+          <label>Palabra clave</label>
+          <input id="kw-new-word" type="text" placeholder="ej: fractura">
         </div>
-        <div class="landing-field">
-          <div class="landing-field-label">WhatsApp</div>
-          <input type="text" value="${esc(currentTenant?.whatsapp || '')}">
+        <div>
+          <label>Categoría</label>
+          <select id="kw-new-cat">
+            <option value="gravedad">gravedad</option>
+            <option value="incapacidad">incapacidad</option>
+            <option value="fatal">fatal</option>
+            <option value="agravante">agravante</option>
+            <option value="evidencia">evidencia</option>
+            <option value="debilidad">debilidad</option>
+          </select>
         </div>
-        <div class="landing-field">
-          <div class="landing-field-label">Email</div>
-          <input type="text" value="${esc(currentTenant?.email || '')}">
+        <div>
+          <label>Impacto (pts)</label>
+          <input id="kw-new-impact" type="number" placeholder="ej: 15" value="10">
         </div>
-        <div style="margin-top:14px">
-          <button class="btn btn-teal btn-sm">Guardar datos</button>
-        </div>
+        <button class="btn btn-teal btn-sm" onclick="JV_DASH.addKeyword()" style="margin-top:0">Agregar</button>
       </div>
     `;
   }
 
   // ══════════════════════════════════════════
-  // ACCIONES SOBRE LEADS
+  // ACCIONES: LEADS
   // ══════════════════════════════════════════
   async function acceptLead(id, btn) {
     if (!confirm('¿Aceptar este caso y crear el expediente?')) return;
     if (btn) { btn.disabled = true; btn.textContent = 'Creando...'; }
-
     const { data, error } = await JV_API.acceptLead(id, currentUser.id);
-
     if (error) {
-      alert('Error al aceptar el caso: ' + (error.message || JSON.stringify(error)));
+      alert('Error: ' + (error.message || JSON.stringify(error)));
       if (btn) { btn.disabled = false; btn.textContent = '✓ Aceptar caso'; }
       return;
     }
-
     await Promise.all([loadLeads(), loadCases()]);
     renderLeadsPanel();
     alert('✅ Caso creado: ' + (data.case_title || 'expediente generado'));
@@ -583,40 +941,214 @@
 
   async function contactLead(id) {
     const { error } = await JV_API.updateLeadStatus(id, 'contactado', currentUser.id);
-    if (!error) {
-      await loadLeads();
-      renderLeadsPanel();
-    }
+    if (!error) { await loadLeads(); renderLeadsPanel(); }
   }
 
   async function rejectLead(id) {
     if (!confirm('¿Rechazar este lead?')) return;
     const { error } = await JV_API.updateLeadStatus(id, 'rechazado');
+    if (!error) { await loadLeads(); renderLeadsPanel(); }
+  }
+
+  // ══════════════════════════════════════════
+  // ACCIONES: CONFIG SAVES
+  // ══════════════════════════════════════════
+  async function saveStudio() {
+    const data = {
+      name       : v('cf-nombre'),
+      email      : v('cf-email'),
+      whatsapp   : v('cf-wa'),
+      phone      : v('cf-tel'),
+      address    : v('cf-dir'),
+      city       : v('cf-ciudad'),
+      jurisdiction: v('cf-jur'),
+      matricula  : v('cf-mat'),
+    };
+    const { error } = await JV_API.updateTenantConfig(currentUser.tenant_id, 'datos', data);
     if (!error) {
-      await loadLeads();
-      renderLeadsPanel();
+      Object.assign(currentTenant, data);
+      document.getElementById('tenantName').textContent = data.name || currentTenant.name;
+      flashMsg('msg-studio');
+    } else alert('Error: ' + error.message);
+  }
+
+  async function saveFormula() {
+    const formula = {
+      coeficienteVuoto         : +v('cf-vuoto'),
+      edadJubilacion           : +v('cf-jubilacion'),
+      coeficienteLucroCesante  : +v('cf-lucro'),
+      porcentajeDanoMoral      : +v('cf-moral') / 100,
+      porcentajeDanoEstetico   : +v('cf-estetico') / 100,
+      gastosMedicosCirugia     : +v('cf-gcir'),
+      gastosMedicosLeve        : +v('cf-glev'),
+      factorMinimo             : +v('cf-fmin'),
+      factorMaximo             : +v('cf-fmax'),
+      tablaIncapacidad: {
+        sinLesiones : 0,
+        leve        : +v('cf-ic-leve') / 100,
+        moderada    : +v('cf-ic-moderada') / 100,
+        grave       : +v('cf-ic-grave') / 100,
+        muyGrave    : +v('cf-ic-muygrave') / 100,
+        fallecimiento: +v('cf-ic-fallec') / 100,
+      },
+    };
+    const { error } = await JV_API.updateTenantConfig(currentUser.tenant_id, 'formula', formula);
+    if (!error) { currentTenant.formula_config = formula; flashMsg('msg-formula'); }
+    else alert('Error: ' + error.message);
+  }
+
+  async function saveScoring() {
+    const scoring = {
+      lesionesGraves         : +v('cf-sc-lesiones'),
+      cirugia                : +v('cf-sc-cirugia'),
+      aseguradoraIdentificada: +v('cf-sc-aseg'),
+      terceroIdentificado    : +v('cf-sc-tercero'),
+      actaPolicial           : +v('cf-sc-acta'),
+      ingresoAlto            : +v('cf-sc-ingreso'),
+      edadProductiva         : +v('cf-sc-edad'),
+      umbralIngresoAlto      : +v('cf-sc-umbingreso'),
+      umbrales: {
+        alto : +v('cf-sc-ualto'),
+        medio: +v('cf-sc-umedio'),
+      },
+    };
+    const { error } = await JV_API.updateTenantConfig(currentUser.tenant_id, 'scoring', scoring);
+    if (!error) { currentTenant.scoring_config = scoring; flashMsg('msg-scoring'); }
+    else alert('Error: ' + error.message);
+  }
+
+  async function saveWA() {
+    const templates = {
+      leadCalculador: v('cf-wa-calc'),
+      bienvenida    : v('cf-wa-bienvenida'),
+      seguimiento   : v('cf-wa-seguimiento'),
+    };
+    const { error } = await JV_API.updateTenantConfig(currentUser.tenant_id, 'whatsapp', templates);
+    if (!error) { currentTenant.wa_templates = templates; flashMsg('msg-wa'); }
+    else alert('Error: ' + error.message);
+  }
+
+  async function saveLanding() {
+    const texts = {
+      heroTitulo  : v('cf-lt-titulo'),
+      heroSubtitulo: v('cf-lt-sub'),
+      heroCta     : v('cf-lt-cta'),
+      disclaimer  : v('cf-lt-disc'),
+    };
+    const { error } = await JV_API.updateTenantConfig(currentUser.tenant_id, 'textos', texts);
+    if (!error) { currentTenant.landing_texts = texts; flashMsg('msg-landing'); }
+    else alert('Error: ' + error.message);
+  }
+
+  async function changePassword() {
+    const p1 = v('cf-pass1');
+    const p2 = v('cf-pass2');
+    if (!p1 || p1.length < 8) { alert('La contraseña debe tener al menos 8 caracteres.'); return; }
+    if (p1 !== p2) { alert('Las contraseñas no coinciden.'); return; }
+    const { error } = await JV_API.changePassword(p1);
+    if (!error) {
+      flashMsg('msg-pass');
+      document.getElementById('cf-pass1').value = '';
+      document.getElementById('cf-pass2').value = '';
+    } else alert('Error: ' + error.message);
+  }
+
+  // ══════════════════════════════════════════
+  // ACCIONES: KEYWORDS
+  // ══════════════════════════════════════════
+  async function addKeyword() {
+    const word   = v('kw-new-word').toLowerCase().trim();
+    const cat    = v('kw-new-cat');
+    const impact = parseInt(v('kw-new-impact'));
+
+    if (!word) { alert('Ingresá una palabra clave.'); return; }
+    if (isNaN(impact)) { alert('Ingresá un impacto numérico.'); return; }
+
+    const { data, error } = await JV_API.addKeyword(currentUser.tenant_id, word, cat, impact);
+    if (error) { alert('Error: ' + (error.message || 'Puede que la keyword ya exista.')); return; }
+
+    keywordsData.push(data);
+    refreshKeywordsTable();
+    document.getElementById('kw-new-word').value   = '';
+    document.getElementById('kw-new-impact').value = '10';
+  }
+
+  async function deleteKeyword(id) {
+    if (!confirm('¿Eliminar esta keyword?')) return;
+    const { error } = await JV_API.deleteKeyword(id);
+    if (!error) {
+      keywordsData = keywordsData.filter(k => k.id !== id);
+      refreshKeywordsTable();
+    } else alert('Error: ' + error.message);
+  }
+
+  function refreshKeywordsTable() {
+    const tbody = document.getElementById('kw-tbody');
+    if (!tbody) return;
+    if (keywordsData.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94A3B8;padding:20px">No hay keywords</td></tr>';
+      return;
     }
+    tbody.innerHTML = keywordsData.map(kw => `
+      <tr>
+        <td>${esc(kw.keyword)}</td>
+        <td><span class="kw-category kw-cat-${kw.category}">${kw.category}</span></td>
+        <td class="${kw.score_impact >= 0 ? 'kw-impact-pos' : 'kw-impact-neg'}">
+          ${kw.score_impact >= 0 ? '+' : ''}${kw.score_impact}
+        </td>
+        <td style="text-align:center">
+          <span style="font-size:11px;color:${kw.is_active?'#27AE60':'#94A3B8'};font-weight:700">
+            ${kw.is_active ? '● Activa' : '○ Inactiva'}
+          </span>
+        </td>
+        <td>
+          <button class="btn-icon-del" data-id="${kw.id}" onclick="JV_DASH.deleteKeyword(this.dataset.id)">🗑</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // ══════════════════════════════════════════
+  // ACCORDION
+  // ══════════════════════════════════════════
+  function toggleAccordion(id) {
+    const body    = document.getElementById('body-' + id);
+    const chevron = document.getElementById('chevron-' + id);
+    if (!body) return;
+    const isOpen = body.classList.toggle('open');
+    chevron.classList.toggle('open', isOpen);
   }
 
   // ══════════════════════════════════════════
   // HELPERS
   // ══════════════════════════════════════════
+  function v(id) {
+    const el = document.getElementById(id);
+    return el ? el.value : '';
+  }
+
+  function flashMsg(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('visible');
+    setTimeout(() => el.classList.remove('visible'), 2500);
+  }
+
   function showLoading(visible) {
     let overlay = document.getElementById('dashLoadingOverlay');
     if (!overlay) {
       overlay = document.createElement('div');
       overlay.id = 'dashLoadingOverlay';
       overlay.style.cssText = `
-        position:fixed;inset:0;background:rgba(255,255,255,0.85);
+        position:fixed;inset:0;background:rgba(255,255,255,0.9);
         display:flex;align-items:center;justify-content:center;
-        z-index:9999;font-size:16px;color:var(--jv-gray-500);
-        flex-direction:column;gap:12px;
+        z-index:9999;flex-direction:column;gap:12px;font-size:15px;color:#64748B;
       `;
       overlay.innerHTML = `
-        <div style="width:40px;height:40px;border:3px solid var(--jv-gray-200);
-          border-top-color:var(--jv-teal);border-radius:50%;
+        <div style="width:42px;height:42px;border:3px solid #E2E8F0;
+          border-top-color:#2E86AB;border-radius:50%;
           animation:spin 0.8s linear infinite"></div>
-        <div>Cargando dashboard...</div>
+        <div>Cargando JusticiaVial...</div>
         <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
       `;
       document.body.appendChild(overlay);
@@ -624,58 +1156,62 @@
     overlay.style.display = visible ? 'flex' : 'none';
   }
 
-  function updateNavBadge(count) {
-    const badge = document.querySelector('.dash-nav-item[data-tab="leads"] .nav-badge');
-    if (badge) badge.textContent = count;
+  function updateLeadsBadge() {
+    const badge = document.getElementById('leadsBadge');
+    if (!badge) return;
+    const count = leadsData.filter(l => l.status === 'nuevo').length;
+    badge.textContent = count;
+    badge.classList.toggle('visible', count > 0);
   }
 
   function timeAgo(dateStr) {
     if (!dateStr) return '—';
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 1)  return 'Ahora mismo';
+    if (mins < 1)  return 'Ahora';
     if (mins < 60) return `Hace ${mins} min`;
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24)  return `Hace ${hrs} hora${hrs > 1 ? 's' : ''}`;
+    if (hrs < 24)  return `Hace ${hrs}h`;
     const days = Math.floor(hrs / 24);
-    return `Hace ${days} día${days > 1 ? 's' : ''}`;
+    return `Hace ${days}d`;
   }
 
-  function waNumber(wa) {
-    return (wa || '').replace(/[^0-9]/g, '');
-  }
+  function waNum(wa) { return (wa || '').replace(/[^0-9]/g, ''); }
 
   function esc(str) {
     if (!str) return '';
     return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function formatAccidentType(t) {
-    const map = {
-      colision_vehicular : 'Colisión vehicular',
-      atropello_peaton   : 'Atropello de peatón',
-      colision_moto      : 'Colisión con moto',
-      vuelco             : 'Vuelco',
-      choque_cadena      : 'Choque en cadena',
-      transporte_publico : 'Transporte público',
-      otro               : 'Otro',
+  function fmtAccidentType(t) {
+    const m = {
+      colision_vehicular:'Colisión vehicular', atropello_peaton:'Atropello de peatón',
+      colision_moto:'Colisión con moto', vuelco:'Vuelco', choque_cadena:'Choque en cadena',
+      transporte_publico:'Transporte público', otro:'Otro',
     };
-    return map[t] || t || 'No especificado';
+    return m[t] || t || 'No especificado';
   }
 
   // ══════════════════════════════════════════
-  // API PÚBLICA (handlers de onclick en HTML)
+  // API PÚBLICA
   // ══════════════════════════════════════════
   window.JV_DASH = {
-    setFilter(f)       { activeFilter = f; renderLeadsPanel(); },
-    showDetail(id)     { showLeadDetail(id); },
-    acceptLead(id, btn){ acceptLead(id, btn); },
-    contactLead(id)    { contactLead(id); },
-    rejectLead(id)     { rejectLead(id); },
+    setFilter   : f   => { activeFilter = f; renderLeadsPanel(); },
+    showDetail  : id  => showLeadDetail(id),
+    search      : q   => { searchQuery = q; renderLeadsPanel(); },
+    acceptLead  : (id, btn) => acceptLead(id, btn),
+    contactLead : id  => contactLead(id),
+    rejectLead  : id  => rejectLead(id),
+    toggleAccordion: id => toggleAccordion(id),
+    saveStudio  : ()  => saveStudio(),
+    saveFormula : ()  => saveFormula(),
+    saveScoring : ()  => saveScoring(),
+    saveWA      : ()  => saveWA(),
+    saveLanding : ()  => saveLanding(),
+    changePassword: ()=> changePassword(),
+    addKeyword  : ()  => addKeyword(),
+    deleteKeyword: id => deleteKeyword(id),
     async logout() {
       if (realtimeSub) JV_API.unsubscribe(realtimeSub);
       await JV_API.logout();

@@ -5,65 +5,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Dashboard — JusticiaVial</title>
-
-  <!-- Styles -->
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
+<div class="dash-layout">
 
-  <div class="dash-layout">
-
-    <!-- ═══ TOP BAR ═══ -->
-    <header class="dash-topbar">
-      <div class="dash-brand">
-        <div class="dash-logo">JV</div>
-        <div>
-          <div class="dash-brand-name">JusticiaVial</div>
-          <div class="dash-brand-sub" id="tenantName">Cargando...</div>
-        </div>
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="dash-sidebar">
+    <div class="dash-logo-wrap">
+      <div class="dash-logo">JV</div>
+      <div>
+        <div class="dash-brand-name">JusticiaVial</div>
+        <div class="dash-brand-sub" id="tenantName">Cargando...</div>
       </div>
-      <div class="dash-user">
-        <span class="dash-user-name" id="userName">—</span>
-        <div class="dash-avatar" id="userAvatar">—</div>
-        <button class="btn btn-outline btn-sm" id="logoutBtn" style="margin-left:12px;font-size:12px" onclick="JV_DASH.logout()">Salir</button>
-      </div>
-    </header>
+    </div>
 
-    <!-- ═══ NAVIGATION ═══ -->
     <nav class="dash-nav">
+      <div class="dash-nav-section">Principal</div>
       <button class="dash-nav-item active" data-tab="leads">
-        Leads <span class="nav-badge">7</span>
+        <span class="nav-icon">📋</span>
+        Leads
+        <span class="nav-badge" id="leadsBadge"></span>
       </button>
       <button class="dash-nav-item" data-tab="pipeline">
+        <span class="nav-icon">⚖️</span>
         Pipeline
       </button>
+      <button class="dash-nav-item" data-tab="analytics">
+        <span class="nav-icon">📊</span>
+        Analíticas
+      </button>
+      <div class="dash-nav-section">Sistema</div>
       <button class="dash-nav-item" data-tab="config">
+        <span class="nav-icon">⚙️</span>
         Configuración
       </button>
     </nav>
 
-    <!-- ═══ CONTENT ═══ -->
-    <main class="dash-content">
-      <div id="panel-leads" class="dash-panel active">
-        <!-- Rendered by JS -->
+    <div class="dash-sidebar-footer">
+      <div class="dash-user-card">
+        <div class="dash-avatar" id="userAvatar">—</div>
+        <div>
+          <div class="dash-user-name" id="userName">—</div>
+          <div class="dash-user-role" id="userRole">—</div>
+        </div>
       </div>
-      <div id="panel-pipeline" class="dash-panel">
-        <!-- Rendered by JS -->
+      <button class="btn-logout" onclick="JV_DASH.logout()">← Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="dash-main">
+
+    <!-- Topbar -->
+    <header class="dash-topbar">
+      <div class="dash-page-title" id="pageTitle">Leads</div>
+      <div class="dash-topbar-right">
+        <div class="dash-search-wrap">
+          <span class="dash-search-icon">🔍</span>
+          <input type="text" class="dash-search" id="searchInput"
+            placeholder="Buscar lead por nombre, ciudad..."
+            oninput="JV_DASH.search(this.value)">
+        </div>
+        <button class="dash-notif-btn" title="Notificaciones">
+          🔔
+          <span class="notif-dot" id="notifDot" style="display:none"></span>
+        </button>
       </div>
-      <div id="panel-config" class="dash-panel">
-        <!-- Rendered by JS -->
-      </div>
-    </main>
+    </header>
 
-  </div>
+    <!-- Panels -->
+    <div class="dash-content">
+      <div id="panel-leads"     class="dash-panel active"></div>
+      <div id="panel-pipeline"  class="dash-panel"></div>
+      <div id="panel-analytics" class="dash-panel"></div>
+      <div id="panel-config"    class="dash-panel"></div>
+    </div>
 
-  <!-- ═══ SCRIPTS ═══ -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
-  <script src="js/engine.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/dashboard.js"></script>
+  </main>
+</div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/api.js"></script>
+<script src="js/dashboard.js"></script>
 </body>
 </html>
