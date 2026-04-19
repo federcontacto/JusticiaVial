@@ -1688,7 +1688,20 @@
     return `Hace ${days}d`;
   }
 
-  function waNum(wa) { return (wa || '').replace(/[^0-9]/g, ''); }
+  function waNum(wa) {
+    if (!wa) return '';
+    let n = wa.replace(/[^0-9]/g, '');
+    // Ya tiene prefijo completo 549 (ej: 5491112345678)
+    if (n.startsWith('549') && n.length >= 12) return n;
+    // Tiene código de país 54 pero le falta el 9 de móvil
+    if (n.startsWith('54')) return '549' + n.slice(2);
+    // Número local con 0 adelante (ej: 01112345678)
+    if (n.startsWith('0'))  return '549' + n.slice(1);
+    // 10 dígitos sin prefijo (ej: 1112345678)
+    if (n.length === 10)    return '549' + n;
+    // Cualquier otro caso: agregar 549
+    return '549' + n;
+  }
 
   function esc(str) {
     if (!str) return '';
