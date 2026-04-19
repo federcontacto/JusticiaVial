@@ -1342,9 +1342,14 @@
     const pass   = v('inv-pass').trim();
     const rol    = v('inv-rol');
 
-    if (!nombre)            { alert('Ingresá el nombre completo del usuario.'); return; }
-    if (!email)             { alert('Ingresá el email del usuario.'); return; }
-    if (pass.length < 8)    { alert('La contraseña temporal debe tener al menos 8 caracteres.'); return; }
+    if (!nombre)         { alert('Ingresá el nombre completo del usuario.'); return; }
+    if (!email)          { alert('Ingresá el email del usuario.'); return; }
+    // Validar que el email solo tenga caracteres ASCII válidos (sin tildes ni ñ)
+    if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      alert('⚠ El email "' + email + '" tiene un formato inválido.\n\nLos emails no pueden contener tildes, ñ ni caracteres especiales (ej: á, é, í, ó, ú, ñ).\n\nRevisá que el email esté bien escrito.');
+      return;
+    }
+    if (pass.length < 8) { alert('La contraseña temporal debe tener al menos 8 caracteres.'); return; }
 
     const btn = document.getElementById('inv-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Creando...'; }
@@ -1355,9 +1360,10 @@
 
     if (error) {
       const msg = error.message || JSON.stringify(error);
-      // Error común: usuario ya existe en Auth
       if (msg.includes('already registered') || msg.includes('duplicate')) {
         alert('⚠ Ese email ya está registrado en el sistema.');
+      } else if (msg.includes('invalid format') || msg.includes('validate email')) {
+        alert('⚠ El email ingresado tiene un formato inválido.\n\nAsegurate de que no tenga tildes, ñ ni caracteres especiales.');
       } else {
         alert('Error al crear usuario: ' + msg);
       }
