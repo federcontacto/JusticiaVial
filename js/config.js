@@ -1,15 +1,28 @@
 /* ══════════════════════════════════════════════
    JUSTICIAVIAL — Configuración Editable
    ══════════════════════════════════════════════
-   
+
    Este archivo contiene TODA la configuración
    editable del sistema. Para modificar cálculos,
-   keywords, textos o parámetros, editá solo 
+   keywords, textos o parámetros, editá solo
    este archivo.
-   
+
    ══════════════════════════════════════════════ */
 
-    }
+const JV_CONFIG = {
+
+  // ── Datos del estudio ──
+  estudio: {
+    nombre: "Estudio Lagrenade & Asociados",
+    nombreCorto: "Lagrenade",
+    slug: "lagrenade",
+    whatsapp: "5491130568410",
+    telefono: "+54 11 3056-8410",
+    email: "",
+    direccion: "",
+    ciudad: "CABA",
+    jurisdiccion: "CABA",
+    matricula: "",
   },
 
   // ── Fórmula de Indemnización ──
