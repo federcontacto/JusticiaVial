@@ -1837,3 +1837,202 @@
   border-top: 1px solid #F1F5F9;
   margin: 16px 0;
 }
+
+/* ══════════════════════════════════════════
+   HAMBURGER BUTTON
+   ══════════════════════════════════════════ */
+.dash-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.hamburger-btn {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1.5px solid #E2E8F0;
+  background: white;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.hamburger-btn:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E0;
+}
+
+.hamburger-icon {
+  font-size: 17px;
+  color: #0D2137;
+  line-height: 1;
+  font-style: normal;
+}
+
+/* Overlay mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 33, 55, 0.55);
+  z-index: 199;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  backdrop-filter: blur(2px);
+}
+
+.sidebar-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — TABLET (≤ 900px)
+   ══════════════════════════════════════════ */
+@media (max-width: 900px) {
+  /* Mostrar hamburger */
+  .hamburger-btn     { display: flex; }
+  .sidebar-overlay   { display: block; }
+
+  /* Sidebar: oculto por defecto, desliza al abrir */
+  .dash-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 200;
+  }
+  .dash-sidebar.mob-open {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(0,0,0,0.25);
+  }
+
+  /* Main sin margen izquierdo */
+  .dash-main { margin-left: 0; }
+
+  /* Ocultar fecha en topbar */
+  .topbar-date { display: none; }
+
+  /* Search más angosto */
+  .dash-search { width: 200px; }
+
+  /* Métricas: 2 columnas */
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Analytics: 1 columna */
+  .analytics-grid { grid-template-columns: 1fr; }
+
+  /* Kanban: scroll horizontal (ya lo tiene) */
+  .kanban-board { min-width: 700px; }
+
+  /* Config forms: 2 columnas en tablet */
+  .config-row-3 { grid-template-columns: 1fr 1fr; }
+  .config-row-4 { grid-template-columns: 1fr 1fr; }
+
+  /* User invite form: 2 columnas */
+  .user-invite-form { grid-template-columns: 1fr 1fr; }
+
+  /* Permisos: 1 columna */
+  .perms-info-grid { grid-template-columns: 1fr; }
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — MOBILE (≤ 640px)
+   ══════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* Topbar */
+  .dash-topbar { padding: 0 14px; gap: 8px; }
+  .dash-search { width: 150px; font-size: 12px; }
+
+  /* Contenido */
+  .dash-content { padding: 14px; }
+
+  /* Métricas: 1x2 en mobile */
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .metric-value { font-size: 24px; }
+
+  /* Section header apilado */
+  .section-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .filter-bar {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+
+  /* Config forms: 1 columna */
+  .config-row-2 { grid-template-columns: 1fr; }
+  .config-row-3 { grid-template-columns: 1fr; }
+  .config-row-4 { grid-template-columns: 1fr; }
+  .config-sections { max-width: 100%; }
+
+  /* Conversión: 1 columna */
+  .conv-stats { grid-template-columns: 1fr; gap: 8px; }
+
+  /* Lead fields en detalle: 2 columnas */
+  .lead-fields-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* Slide-over: full width */
+  .slide-panel { width: 100%; }
+  .slide-header { padding: 16px; }
+  .slide-body   { padding: 16px 16px 28px; }
+
+  /* User invite: 1 columna */
+  .user-invite-form { grid-template-columns: 1fr; }
+  .perms-info-grid  { grid-template-columns: 1fr; }
+
+  /* KW add form: 2 cols */
+  .kw-add-form { grid-template-columns: 1fr 1fr; }
+
+  /* Password form */
+  .password-form { max-width: 100%; }
+
+  /* WA templates: texto más chico */
+  .wa-template-wrap textarea { font-size: 13px; }
+
+  /* Topbar right: comprimir */
+  .dash-topbar-right { gap: 6px; }
+  .dash-notif-btn { width: 32px; height: 32px; font-size: 13px; }
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — MOBILE CHICO (≤ 420px)
+   ══════════════════════════════════════════ */
+@media (max-width: 420px) {
+  .dash-topbar { padding: 0 10px; height: 52px; }
+  .dash-content { padding: 10px; }
+
+  /* Métricas: 1 columna en pantallas muy chicas */
+  .metrics-grid { grid-template-columns: 1fr; }
+
+  /* Lead fields: 1 columna */
+  .lead-fields-grid { grid-template-columns: 1fr; }
+
+  /* Search: compacto o colapsado */
+  .dash-search { width: 110px; font-size: 11.5px; padding-left: 28px; }
+  .dash-search::placeholder { font-size: 11px; }
+
+  /* Page title más chico */
+  .dash-page-title { font-size: 14px; }
+
+  /* Filter chips scroll */
+  .filter-chip { font-size: 11px; padding: 4px 9px; }
+
+  /* Table header más chico */
+  .leads-table th { padding: 8px 10px; font-size: 9.5px; }
+  .leads-table td { padding: 9px 10px; }
+
+  /* Kw add form: 1 columna */
+  .kw-add-form { grid-template-columns: 1fr; }
+
+  /* Config accordion header */
+  .config-accordion-title { font-size: 13px; }
+  .config-accordion-sub   { font-size: 10.5px; }
+}

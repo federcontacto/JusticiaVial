@@ -163,6 +163,29 @@
   // ══════════════════════════════════════════
   // TOPBAR DATE
   // ══════════════════════════════════════════
+  // ══════════════════════════════════════════
+  // SIDEBAR MOBILE
+  // ══════════════════════════════════════════
+  function toggleSidebar() {
+    const sidebar = document.getElementById('dashSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const icon    = document.getElementById('hamburgerIcon');
+    const isOpen  = sidebar.classList.toggle('mob-open');
+    overlay?.classList.toggle('visible', isOpen);
+    if (icon) icon.textContent = isOpen ? '✕' : '☰';
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+  }
+
+  function closeSidebar() {
+    const sidebar = document.getElementById('dashSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const icon    = document.getElementById('hamburgerIcon');
+    sidebar?.classList.remove('mob-open');
+    overlay?.classList.remove('visible');
+    if (icon) icon.textContent = '☰';
+    document.body.style.overflow = '';
+  }
+
   function initTopbarDate() {
     const el = document.getElementById('topbarDate');
     if (!el) return;
@@ -239,8 +262,8 @@
   // TAB SWITCHING
   // ══════════════════════════════════════════
   function switchTab(tab) {
-    // Redirigir a leads si el rol no tiene acceso
     if (!canAccessTab(tab)) { switchTab('leads'); return; }
+    closeSidebar(); // cierra sidebar en mobile al navegar
     activeTab = tab;
     document.querySelectorAll('.dash-nav-item').forEach(n =>
       n.classList.toggle('active', n.dataset.tab === tab));
@@ -1746,7 +1769,9 @@
     quickStatus : (el, id) => quickStatus(el, id),
     setStatus   : (id, s)  => setStatus(id, s),
     closeDetail : ()  => closeSlideOver(),
-    moveCase    : (id, stage) => moveCase(id, stage),
+    moveCase      : (id, stage) => moveCase(id, stage),
+    toggleSidebar : () => toggleSidebar(),
+    closeSidebar  : () => closeSidebar(),
     async logout() {
       if (realtimeSub) JV_API.unsubscribe(realtimeSub);
       await JV_API.logout();

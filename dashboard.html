@@ -11,8 +11,11 @@
 <body>
 <div class="dash-layout">
 
+  <!-- Overlay para sidebar mobile -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="JV_DASH.closeSidebar()"></div>
+
   <!-- ═══ SIDEBAR ═══ -->
-  <aside class="dash-sidebar">
+  <aside class="dash-sidebar" id="dashSidebar">
     <div class="dash-logo-wrap">
       <div class="dash-logo">JV</div>
       <div>
@@ -60,7 +63,12 @@
 
     <!-- Topbar -->
     <header class="dash-topbar">
-      <div class="dash-page-title" id="pageTitle">Leads</div>
+      <div class="dash-topbar-left">
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="JV_DASH.toggleSidebar()" aria-label="Menú">
+          <span class="hamburger-icon" id="hamburgerIcon">☰</span>
+        </button>
+        <div class="dash-page-title" id="pageTitle">Leads</div>
+      </div>
       <div class="dash-topbar-right">
         <div id="topbarDate" class="topbar-date"></div>
         <div class="dash-search-wrap">
