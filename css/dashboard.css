@@ -1264,6 +1264,340 @@
 }
 
 /* ══════════════════════════
+   TOPBAR DATE
+   ══════════════════════════ */
+.topbar-date {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #94A3B8;
+  white-space: nowrap;
+  text-transform: capitalize;
+  letter-spacing: 0.01em;
+}
+
+/* ══════════════════════════
+   TOAST SYSTEM
+   ══════════════════════════ */
+#jv-toasts {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.jv-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: white;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  pointer-events: auto;
+  animation: toastIn 0.22s cubic-bezier(0.34,1.3,0.64,1);
+  max-width: 360px;
+  font-family: var(--font-body);
+}
+
+.jv-toast-out {
+  animation: toastOut 0.3s ease forwards;
+}
+
+.jv-toast-success { background: linear-gradient(135deg, #059669, #047857); }
+.jv-toast-error   { background: linear-gradient(135deg, #DC2626, #B91C1C); }
+.jv-toast-warning { background: linear-gradient(135deg, #D97706, #B45309); }
+.jv-toast-info    { background: linear-gradient(135deg, #2E86AB, #1a5f7a); }
+
+.jv-toast-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+@keyframes toastIn {
+  from { transform: translateX(110%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes toastOut {
+  to { transform: translateX(110%); opacity: 0; }
+}
+
+/* ══════════════════════════
+   SLIDE-OVER PANEL
+   ══════════════════════════ */
+.slide-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(13,33,55,0.45);
+  z-index: 600;
+  animation: fadeIn 0.2s ease;
+  backdrop-filter: blur(2px);
+}
+
+.slide-panel {
+  position: fixed;
+  top: 0; right: 0;
+  width: 500px;
+  max-width: 95vw;
+  height: 100vh;
+  background: white;
+  z-index: 601;
+  overflow-y: auto;
+  box-shadow: -12px 0 48px rgba(0,0,0,0.18);
+  animation: slideFromRight 0.25s cubic-bezier(0.34,1,0.64,1);
+}
+
+@keyframes slideFromRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.slide-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 22px 18px;
+  border-bottom: 1px solid #F1F5F9;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+}
+
+.slide-header-info { flex: 1; min-width: 0; }
+
+.slide-lead-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0D2137;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.slide-lead-meta {
+  font-size: 12.5px;
+  color: #94A3B8;
+}
+
+.slide-close-btn {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid #E2E8F0;
+  background: white;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  color: #64748B;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  margin-left: 12px;
+  font-family: var(--font-body);
+}
+
+.slide-close-btn:hover {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+  color: #DC2626;
+}
+
+.slide-body {
+  padding: 20px 22px 32px;
+}
+
+.slide-score-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.slide-insurer-tag {
+  font-size: 12.5px;
+  color: #64748B;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.slide-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid #F1F5F9;
+}
+
+/* ══════════════════════════
+   SORTABLE TABLE HEADERS
+   ══════════════════════════ */
+.th-sort {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.12s, background 0.12s;
+  white-space: nowrap;
+}
+
+.th-sort:hover {
+  color: #2E86AB;
+  background: #F0F9FF;
+}
+
+.th-sort-on { color: #2E86AB !important; }
+
+.sort-idle {
+  opacity: 0.3;
+  font-size: 10px;
+  margin-left: 3px;
+}
+
+.sort-active-icon {
+  color: #2E86AB;
+  font-size: 11px;
+  margin-left: 3px;
+  font-weight: 900;
+}
+
+/* Lead date cell */
+.lead-cell-date {
+  font-size: 12px;
+  color: #94A3B8;
+  white-space: nowrap;
+}
+
+/* Section title sub */
+.section-title-sub {
+  font-size: 12.5px;
+  color: #94A3B8;
+  font-weight: 500;
+  margin-left: 6px;
+}
+
+/* Refresh button */
+.btn-refresh {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1.5px solid #E2E8F0;
+  background: white;
+  color: #64748B;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+  font-family: var(--font-body);
+}
+
+.btn-refresh:hover {
+  border-color: #2E86AB;
+  color: #2E86AB;
+  background: #F0F9FF;
+}
+
+/* Clickable status badge */
+.badge-clickable {
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.badge-clickable:hover {
+  opacity: 0.85;
+  transform: scale(1.04);
+}
+
+/* Quick-status dropdown */
+.quick-status-menu {
+  position: absolute;
+  background: white;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.14);
+  z-index: 800;
+  padding: 5px;
+  min-width: 170px;
+  animation: fadeIn 0.15s ease;
+}
+
+.qs-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: background 0.1s;
+}
+
+.qs-option:hover { background: #F1F5F9; }
+
+/* ══════════════════════════
+   PIPELINE IMPROVEMENTS
+   ══════════════════════════ */
+.kanban-col-total {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2E86AB;
+  margin-top: 2px;
+}
+
+.kanban-empty {
+  text-align: center;
+  color: #CBD5E0;
+  font-size: 12px;
+  padding: 20px 0;
+  font-style: italic;
+}
+
+.kc-move-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1.5px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #2E86AB;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-body);
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.kc-move-btn:hover {
+  background: #2E86AB;
+  border-color: #2E86AB;
+  color: white;
+}
+
+.kc-final-tag {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #27AE60;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ══════════════════════════
    USUARIOS — ABM
    ══════════════════════════ */
 .users-table {

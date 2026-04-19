@@ -18,6 +18,8 @@
   let activeTab     = 'leads';
   let activeFilter  = 'todos';
   let realtimeSub   = null;
+  let sortField     = 'rawDate';
+  let sortDir       = 'desc';
 
   const PAGE_TITLES = {
     leads    : 'Leads',
@@ -74,8 +76,12 @@
     await Promise.all([loadLeads(), loadCases()]);
 
     applyRoleAccess();
+    initTopbarDate();
     showLoading(false);
     switchTab('leads');
+
+    // ESC cierra el slide-over
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSlideOver(); });
 
     realtimeSub = JV_API.subscribeToNewLeads(currentUser.tenant_id, lead => {
       leadsData.unshift(mapLead(lead));
@@ -104,6 +110,70 @@
     const { data, error } = await JV_API.getUsers(currentUser.tenant_id);
     if (!error && data) usersData = data;
     return usersData;
+  }
+
+  // ══════════════════════════════════════════
+  // TOAST SYSTEM
+  // ══════════════════════════════════════════
+  function showToast(msg, type = 'success', duration = 3500) {
+    let container = document.getElementById('jv-toasts');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'jv-toasts';
+      document.body.appendChild(container);
+    }
+    const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+    const el = document.createElement('div');
+    el.className = `jv-toast jv-toast-${type}`;
+    el.innerHTML = `<span class="jv-toast-icon">${icons[type] || '•'}</span><span>${msg}</span>`;
+    container.appendChild(el);
+    setTimeout(() => {
+      el.classList.add('jv-toast-out');
+      setTimeout(() => el.remove(), 350);
+    }, duration);
+  }
+
+  // ══════════════════════════════════════════
+  // SLIDE-OVER PANEL
+  // ══════════════════════════════════════════
+  function openSlideOver(html) {
+    closeSlideOver();
+
+    const backdrop = document.createElement('div');
+    backdrop.id = 'jv-backdrop';
+    backdrop.className = 'slide-backdrop';
+    backdrop.addEventListener('click', closeSlideOver);
+
+    const panel = document.createElement('div');
+    panel.id = 'jv-slideover';
+    panel.className = 'slide-panel';
+    panel.innerHTML = html;
+
+    document.body.appendChild(backdrop);
+    document.body.appendChild(panel);
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeSlideOver() {
+    document.getElementById('jv-backdrop')?.remove();
+    document.getElementById('jv-slideover')?.remove();
+    document.body.style.overflow = '';
+  }
+
+  // ══════════════════════════════════════════
+  // TOPBAR DATE
+  // ══════════════════════════════════════════
+  function initTopbarDate() {
+    const el = document.getElementById('topbarDate');
+    if (!el) return;
+    const update = () => {
+      const now = new Date();
+      el.textContent = now.toLocaleDateString('es-AR', {
+        weekday: 'long', day: 'numeric', month: 'long',
+      });
+    };
+    update();
+    setInterval(update, 60000);
   }
 
   // ══════════════════════════════════════════
@@ -198,8 +268,23 @@
   // ══════════════════════════════════════════
   // PANEL: LEADS
   // ══════════════════════════════════════════
+  function sortLeads(field) {
+    if (sortField === field) {
+      sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+    } else {
+      sortField = field;
+      sortDir   = 'desc';
+    }
+    renderLeadsPanel();
+  }
+
+  function sortIcon(field) {
+    if (sortField !== field) return '<span class="sort-idle">⇅</span>';
+    return sortDir === 'desc' ? '<span class="sort-active-icon">↓</span>' : '<span class="sort-active-icon">↑</span>';
+  }
+
   function getFilteredLeads() {
-    let list = leadsData;
+    let list = [...leadsData];
     if (activeFilter !== 'todos') list = list.filter(l => l.level === activeFilter);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -210,6 +295,20 @@
         (l.desc && l.desc.toLowerCase().includes(q))
       );
     }
+    // Sort
+    list.sort((a, b) => {
+      let av, bv;
+      switch (sortField) {
+        case 'name'  : av = a.name;    bv = b.name;    break;
+        case 'score' : av = a.score;   bv = b.score;   break;
+        case 'amount': av = a.max;     bv = b.max;     break;
+        default      : av = a.rawDate; bv = b.rawDate; break;
+      }
+      if (typeof av === 'string') {
+        return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      }
+      return sortDir === 'asc' ? av - bv : bv - av;
+    });
     return list;
   }
 
@@ -257,13 +356,14 @@
       <div class="section-header">
         <div class="section-title">
           Leads
-          ${searchQuery ? `<span style="font-size:13px;color:#94A3B8;font-weight:500"> — "${esc(searchQuery)}" (${filtered.length})</span>` : ''}
+          ${searchQuery ? `<span class="section-title-sub">"${esc(searchQuery)}" · ${filtered.length} resultado${filtered.length !== 1 ? 's' : ''}</span>` : ''}
         </div>
         <div class="filter-bar">
           <button class="filter-chip ${activeFilter==='todos' ?'active':''}" onclick="JV_DASH.setFilter('todos')">Todos (${leadsData.length})</button>
           <button class="filter-chip ${activeFilter==='alto'  ?'active':''}" onclick="JV_DASH.setFilter('alto')">🔴 Alto (${leadsData.filter(l=>l.level==='alto').length})</button>
           <button class="filter-chip ${activeFilter==='medio' ?'active':''}" onclick="JV_DASH.setFilter('medio')">🟡 Medio (${leadsData.filter(l=>l.level==='medio').length})</button>
           <button class="filter-chip ${activeFilter==='bajo'  ?'active':''}" onclick="JV_DASH.setFilter('bajo')">⚪ Bajo (${leadsData.filter(l=>l.level==='bajo').length})</button>
+          <button class="btn-refresh" onclick="JV_DASH.refreshLeads()" title="Actualizar leads">↻</button>
         </div>
       </div>
 
@@ -280,12 +380,20 @@
               <table class="leads-table">
                 <thead>
                   <tr>
-                    <th>Lead</th>
-                    <th>Score</th>
+                    <th class="th-sort ${sortField==='name'?'th-sort-on':''}" onclick="JV_DASH.sortLeads('name')">
+                      Lead ${sortIcon('name')}
+                    </th>
+                    <th class="th-sort ${sortField==='score'?'th-sort-on':''}" onclick="JV_DASH.sortLeads('score')">
+                      Score ${sortIcon('score')}
+                    </th>
                     <th>Estado</th>
-                    <th>Estimado</th>
+                    <th class="th-sort ${sortField==='amount'?'th-sort-on':''}" onclick="JV_DASH.sortLeads('amount')">
+                      Estimado ${sortIcon('amount')}
+                    </th>
                     <th>Descripción</th>
-                    <th style="text-align:center">Docs</th>
+                    <th class="th-sort ${sortField==='rawDate'?'th-sort-on':''}" onclick="JV_DASH.sortLeads('rawDate')">
+                      Fecha ${sortIcon('rawDate')}
+                    </th>
                     <th></th>
                   </tr>
                 </thead>
@@ -294,19 +402,27 @@
                     <tr data-id="${l.id}" onclick="JV_DASH.showDetail(this.dataset.id)">
                       <td>
                         <div class="lead-cell-name">${esc(l.name)}</div>
-                        <div class="lead-cell-city">${esc(l.city)} · ${l.date}</div>
+                        <div class="lead-cell-city">${esc(l.city)} · ${esc(l.type)}</div>
                       </td>
-                      <td><span class="badge badge-${l.level}">${l.score}/100</span></td>
-                      <td><span class="badge badge-${l.status}">${l.status}</span></td>
+                      <td>
+                        <span class="badge badge-${l.level}">${l.score}/100</span>
+                      </td>
+                      <td>
+                        <span class="badge badge-${l.status} badge-clickable"
+                          data-id="${l.id}"
+                          onclick="event.stopPropagation();JV_DASH.quickStatus(this, '${l.id}')">
+                          ${l.status} ▾
+                        </span>
+                      </td>
                       <td>
                         <div class="lead-cell-amount">${fmt(l.min)}</div>
                         <div class="lead-cell-amount-max">a ${fmt(l.max)}</div>
                       </td>
                       <td><div class="lead-cell-summary">${esc(l.desc)}</div></td>
-                      <td class="lead-cell-docs">${l.docs || '—'}</td>
+                      <td class="lead-cell-date">${l.date}</td>
                       <td>
                         <button class="btn-wa-sm" onclick="event.stopPropagation();window.open('https://wa.me/${waNum(l.wa)}','_blank')">
-                          💬 WA
+                          💬
                         </button>
                       </td>
                     </tr>
@@ -316,72 +432,71 @@
             </div>
           </div>`
       }
-      <div id="leadDetailArea"></div>
     `;
   }
 
   function showLeadDetail(id) {
     const l = leadsData.find(x => x.id === id);
     if (!l) return;
-    const fmt  = JV_ENGINE.formatARS;
-    const area = document.getElementById('leadDetailArea');
+    const fmt = JV_ENGINE.formatARS;
 
-    area.innerHTML = `
-      <div class="lead-detail">
-        <div class="lead-detail-header">
-          <div>
-            <div class="lead-detail-name">${esc(l.name)}</div>
-            <div class="lead-detail-meta">${esc(l.city)} · ${esc(l.type)} · ${l.date}</div>
-          </div>
-          <div class="lead-detail-actions">
-            <span class="badge badge-${l.level}" style="font-size:13px;padding:6px 14px">
-              ${l.score}/100 — ${l.level.toUpperCase()}
-            </span>
-            <button class="btn btn-outline btn-sm" onclick="document.getElementById('leadDetailArea').innerHTML=''">✕ Cerrar</button>
-          </div>
+    openSlideOver(`
+      <div class="slide-header">
+        <div class="slide-header-info">
+          <div class="slide-lead-name">${esc(l.name)}</div>
+          <div class="slide-lead-meta">${esc(l.city)} · ${esc(l.type)} · ${l.date}</div>
+        </div>
+        <button class="slide-close-btn" onclick="JV_DASH.closeDetail()">✕</button>
+      </div>
+
+      <div class="slide-body">
+        <div class="slide-score-row">
+          <span class="badge badge-${l.level}" style="font-size:13px;padding:6px 16px">
+            ${l.score}/100 · ${l.level.toUpperCase()}
+          </span>
+          <span class="slide-insurer-tag">🏢 ${esc(l.insurer)}</span>
         </div>
 
-        <div class="lead-fields-grid">
-          ${field('Edad', l.age ? l.age + ' años' : '—')}
-          ${field('Ingreso mensual', l.income ? fmt(l.income) : '—')}
-          ${field('Lesión', l.injury)}
-          ${field('Aseguradora', l.insurer)}
+        <div class="lead-fields-grid" style="margin-bottom:14px">
+          ${field('Edad',          l.age ? l.age + ' años' : '—')}
+          ${field('Ingreso',       l.income ? fmt(l.income) + '/mes' : '—')}
+          ${field('Lesión',        l.injury)}
+          ${field('Aseguradora',   l.insurer)}
           ${field('Acta policial', l.policeReport ? '✓ Sí' : '✗ No')}
-          ${field('Datos del tercero', l.thirdParty ? '✓ Sí' : '✗ No')}
-          ${field('Días de baja', l.sickDays + ' días')}
-          ${field('WhatsApp', l.wa)}
+          ${field('Datos tercero', l.thirdParty   ? '✓ Sí' : '✗ No')}
+          ${field('Días de baja',  l.sickDays + ' días')}
+          ${field('WhatsApp',      l.wa || '—')}
         </div>
 
-        <div class="lead-description">
+        <div class="lead-description" style="margin-bottom:14px">
           <div class="lead-description-label">Descripción del caso</div>
           <div class="lead-description-text">${esc(l.desc)}</div>
         </div>
 
         ${l.ai ? `
-          <div class="ai-analysis">
+          <div class="ai-analysis" style="margin-bottom:14px">
             <div class="ai-analysis-title">🤖 Análisis IA</div>
             <div class="ai-analysis-text">${esc(l.ai)}</div>
             ${l.risks.length ? `<div class="ai-risks">${l.risks.map(r=>`<span class="ai-risk-tag">⚠ ${esc(r)}</span>`).join('')}</div>` : ''}
           </div>` : ''}
 
-        <div class="lead-estimate-box">
+        <div class="lead-estimate-box" style="margin-bottom:16px">
           <div class="lead-estimate-label">Indemnización estimada</div>
           <div class="lead-estimate-amount">${fmt(l.min)} — ${fmt(l.max)}</div>
         </div>
 
-        <div class="lead-action-bar">
+        <div class="slide-actions">
           <button class="btn btn-success btn-sm" data-id="${l.id}"
             onclick="JV_DASH.acceptLead(this.dataset.id, this)">✓ Aceptar caso</button>
           <button class="btn btn-outline btn-sm" style="color:#2E86AB"
-            data-id="${l.id}" onclick="JV_DASH.contactLead(this.dataset.id)">✉ Marcar contactado</button>
+            data-id="${l.id}" onclick="JV_DASH.contactLead(this.dataset.id)">✉ Contactado</button>
           <button class="btn btn-danger-outline btn-sm" data-id="${l.id}"
             onclick="JV_DASH.rejectLead(this.dataset.id)">✕ Rechazar</button>
           <button class="btn btn-whatsapp btn-sm"
             onclick="window.open('https://wa.me/${waNum(l.wa)}','_blank')">💬 WhatsApp</button>
         </div>
       </div>
-    `;
-    area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    `);
   }
 
   function field(label, value) {
@@ -434,24 +549,38 @@
         : `<div class="section-title mb-md">Pipeline de litigios</div>
            <div class="kanban-scroll-wrap">
              <div class="kanban-board">
-               ${STAGE_KEYS.map(s => `
+               ${STAGE_KEYS.map(s => {
+                 const colTotal = grouped[s].reduce((a, c) => a + c.amount, 0);
+                 const nextStage = STAGE_KEYS[STAGE_KEYS.indexOf(s) + 1] || null;
+                 return `
                  <div class="kanban-column">
                    <div class="kanban-col-header">
-                     <div class="kanban-col-title">${STAGES[s]}</div>
+                     <div>
+                       <div class="kanban-col-title">${STAGES[s]}</div>
+                       ${colTotal > 0 ? `<div class="kanban-col-total">${fmt(colTotal)}</div>` : ''}
+                     </div>
                      <div class="kanban-col-count">${grouped[s].length}</div>
                    </div>
-                   ${grouped[s].map(c => `
-                     <div class="kanban-card">
-                       <div class="kc-name">${esc(c.name)}</div>
-                       <div class="kc-sub">${esc(c.insurer)}</div>
-                       <div class="kc-footer">
-                         <div class="kc-amount">${fmt(c.amount)}</div>
-                         <div class="kc-date">${c.date}</div>
+                   ${grouped[s].length === 0
+                     ? `<div class="kanban-empty">Sin casos</div>`
+                     : grouped[s].map(c => `
+                       <div class="kanban-card">
+                         <div class="kc-name">${esc(c.name)}</div>
+                         <div class="kc-sub">${esc(c.insurer)}</div>
+                         <div class="kc-footer">
+                           <div class="kc-amount">${fmt(c.amount)}</div>
+                           <div class="kc-date">${c.date}</div>
+                         </div>
+                         ${nextStage ? `
+                           <button class="kc-move-btn" data-id="${c.id}" data-stage="${nextStage}"
+                             onclick="JV_DASH.moveCase(this.dataset.id, this.dataset.stage)">
+                             → ${STAGES[nextStage].split(' ')[0]}
+                           </button>` : `
+                           <div class="kc-final-tag">✓ Finalizado</div>`}
                        </div>
-                     </div>
-                   `).join('')}
-                 </div>
-               `).join('')}
+                     `).join('')}
+                 </div>`;
+               }).join('')}
              </div>
            </div>`
       }
@@ -969,29 +1098,105 @@
   // ══════════════════════════════════════════
   // ACCIONES: LEADS
   // ══════════════════════════════════════════
+  async function moveCase(caseId, newStage) {
+    const { error } = await JV_API.updateCaseStage(caseId, newStage);
+    if (error) { showToast('Error al mover caso', 'error'); return; }
+    const c = casesData.find(x => x.id === caseId);
+    if (c) c.stage = STAGE_DB_MAP[newStage] || newStage;
+    renderPipelinePanel();
+    showToast('Caso avanzado a ' + (STAGES[STAGE_DB_MAP[newStage] || newStage] || newStage), 'success', 2500);
+  }
+
+  async function refreshLeads() {
+    showToast('Actualizando leads...', 'info', 1500);
+    await loadLeads();
+    renderLeadsPanel();
+  }
+
+  function quickStatus(triggerEl, id) {
+    // Cerrar cualquier dropdown abierto
+    document.querySelectorAll('.quick-status-menu').forEach(m => m.remove());
+
+    const STATUSES = [
+      { value: 'nuevo',      label: '🔵 Nuevo' },
+      { value: 'contactado', label: '🟣 Contactado' },
+      { value: 'evaluacion', label: '🟡 En evaluación' },
+      { value: 'aceptado',   label: '🟢 Aceptado' },
+      { value: 'rechazado',  label: '⚪ Rechazado' },
+    ];
+
+    const menu = document.createElement('div');
+    menu.className = 'quick-status-menu';
+    menu.innerHTML = STATUSES.map(s => `
+      <button class="qs-option" data-id="${id}" data-status="${s.value}"
+        onclick="JV_DASH.setStatus('${id}','${s.value}')">
+        ${s.label}
+      </button>`).join('');
+
+    // Posicionar bajo el badge
+    const rect = triggerEl.getBoundingClientRect();
+    menu.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+    menu.style.left = (rect.left  + window.scrollX)      + 'px';
+
+    document.body.appendChild(menu);
+
+    // Click fuera cierra el menu
+    setTimeout(() => {
+      document.addEventListener('click', function handler(e) {
+        if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', handler); }
+      });
+    }, 50);
+  }
+
+  async function setStatus(id, newStatus) {
+    document.querySelectorAll('.quick-status-menu').forEach(m => m.remove());
+    const { error } = await JV_API.updateLeadStatus(id, newStatus, currentUser.id);
+    if (error) { showToast('Error al actualizar estado', 'error'); return; }
+    const l = leadsData.find(x => x.id === id);
+    if (l) l.status = newStatus;
+    updateLeadsBadge();
+    renderLeadsPanel();
+    showToast('Estado actualizado', 'success', 2000);
+  }
+
   async function acceptLead(id, btn) {
     if (!confirm('¿Aceptar este caso y crear el expediente?')) return;
     if (btn) { btn.disabled = true; btn.textContent = 'Creando...'; }
     const { data, error } = await JV_API.acceptLead(id, currentUser.id);
     if (error) {
-      alert('Error: ' + (error.message || JSON.stringify(error)));
+      showToast('Error: ' + (error.message || JSON.stringify(error)), 'error');
       if (btn) { btn.disabled = false; btn.textContent = '✓ Aceptar caso'; }
       return;
     }
     await Promise.all([loadLeads(), loadCases()]);
+    closeSlideOver();
     renderLeadsPanel();
-    alert('✅ Caso creado: ' + (data.case_title || 'expediente generado'));
+    showToast('✅ Caso creado: ' + (data.case_title || 'expediente generado'), 'success', 4000);
   }
 
   async function contactLead(id) {
     const { error } = await JV_API.updateLeadStatus(id, 'contactado', currentUser.id);
-    if (!error) { await loadLeads(); renderLeadsPanel(); }
+    if (!error) {
+      closeSlideOver();
+      await loadLeads();
+      renderLeadsPanel();
+      showToast('Lead marcado como contactado', 'success', 2000);
+    } else {
+      showToast('Error al actualizar estado', 'error');
+    }
   }
 
   async function rejectLead(id) {
     if (!confirm('¿Rechazar este lead?')) return;
     const { error } = await JV_API.updateLeadStatus(id, 'rechazado');
-    if (!error) { await loadLeads(); renderLeadsPanel(); }
+    if (!error) {
+      closeSlideOver();
+      await loadLeads();
+      renderLeadsPanel();
+      showToast('Lead rechazado', 'warning', 2000);
+    } else {
+      showToast('Error al rechazar lead', 'error');
+    }
   }
 
   // ══════════════════════════════════════════
@@ -1012,8 +1217,8 @@
     if (!error) {
       Object.assign(currentTenant, data);
       document.getElementById('tenantName').textContent = data.name || currentTenant.name;
-      flashMsg('msg-studio');
-    } else alert('Error: ' + error.message);
+      showToast('Datos del estudio guardados', 'success');
+    } else showToast('Error: ' + error.message, 'error');
   }
 
   async function saveFormula() {
@@ -1037,8 +1242,8 @@
       },
     };
     const { error } = await JV_API.updateTenantConfig(currentUser.tenant_id, 'formula', formula);
-    if (!error) { currentTenant.formula_config = formula; flashMsg('msg-formula'); }
-    else alert('Error: ' + error.message);
+    if (!error) { currentTenant.formula_config = formula; showToast('Fórmula Vuoto guardada', 'success'); }
+    else showToast('Error: ' + error.message, 'error');
   }
 
   async function saveScoring() {
@@ -1057,8 +1262,8 @@
       },
     };
     const { error } = await JV_API.updateTenantConfig(currentUser.tenant_id, 'scoring', scoring);
-    if (!error) { currentTenant.scoring_config = scoring; flashMsg('msg-scoring'); }
-    else alert('Error: ' + error.message);
+    if (!error) { currentTenant.scoring_config = scoring; showToast('Scoring guardado', 'success'); }
+    else showToast('Error: ' + error.message, 'error');
   }
 
   async function saveWA() {
@@ -1068,8 +1273,8 @@
       seguimiento   : v('cf-wa-seguimiento'),
     };
     const { error } = await JV_API.updateTenantConfig(currentUser.tenant_id, 'whatsapp', templates);
-    if (!error) { currentTenant.wa_templates = templates; flashMsg('msg-wa'); }
-    else alert('Error: ' + error.message);
+    if (!error) { currentTenant.wa_templates = templates; showToast('Mensajes de WhatsApp guardados', 'success'); }
+    else showToast('Error: ' + error.message, 'error');
   }
 
   async function saveLanding() {
@@ -1080,8 +1285,8 @@
       disclaimer  : v('cf-lt-disc'),
     };
     const { error } = await JV_API.updateTenantConfig(currentUser.tenant_id, 'textos', texts);
-    if (!error) { currentTenant.landing_texts = texts; flashMsg('msg-landing'); }
-    else alert('Error: ' + error.message);
+    if (!error) { currentTenant.landing_texts = texts; showToast('Textos de la landing guardados', 'success'); }
+    else showToast('Error: ' + error.message, 'error');
   }
 
   async function changePassword() {
@@ -1091,10 +1296,10 @@
     if (p1 !== p2) { alert('Las contraseñas no coinciden.'); return; }
     const { error } = await JV_API.changePassword(p1);
     if (!error) {
-      flashMsg('msg-pass');
+      showToast('Contraseña actualizada correctamente', 'success');
       document.getElementById('cf-pass1').value = '';
       document.getElementById('cf-pass2').value = '';
-    } else alert('Error: ' + error.message);
+    } else showToast('Error: ' + error.message, 'error');
   }
 
   // ══════════════════════════════════════════
@@ -1109,10 +1314,11 @@
     if (isNaN(impact)) { alert('Ingresá un impacto numérico.'); return; }
 
     const { data, error } = await JV_API.addKeyword(currentUser.tenant_id, word, cat, impact);
-    if (error) { alert('Error: ' + (error.message || 'Puede que la keyword ya exista.')); return; }
+    if (error) { showToast('Error: ' + (error.message || 'La keyword puede que ya exista.'), 'error'); return; }
 
     keywordsData.push(data);
     refreshKeywordsTable();
+    showToast('Keyword agregada', 'success', 2000);
     document.getElementById('kw-new-word').value   = '';
     document.getElementById('kw-new-impact').value = '10';
   }
@@ -1123,7 +1329,8 @@
     if (!error) {
       keywordsData = keywordsData.filter(k => k.id !== id);
       refreshKeywordsTable();
-    } else alert('Error: ' + error.message);
+      showToast('Keyword eliminada', 'warning', 2000);
+    } else showToast('Error: ' + error.message, 'error');
   }
 
   function refreshKeywordsTable() {
@@ -1361,11 +1568,11 @@
     if (error) {
       const msg = error.message || JSON.stringify(error);
       if (msg.includes('already registered') || msg.includes('duplicate')) {
-        alert('⚠ Ese email ya está registrado en el sistema.');
+        showToast('⚠ Ese email ya está registrado en el sistema.', 'warning');
       } else if (msg.includes('invalid format') || msg.includes('validate email')) {
-        alert('⚠ El email ingresado tiene un formato inválido.\n\nAsegurate de que no tenga tildes, ñ ni caracteres especiales.');
+        showToast('Email inválido: no uses tildes ni caracteres especiales.', 'error');
       } else {
-        alert('Error al crear usuario: ' + msg);
+        showToast('Error al crear usuario: ' + msg, 'error');
       }
       return;
     }
@@ -1375,18 +1582,18 @@
     document.getElementById('inv-nombre').value = '';
     document.getElementById('inv-email').value  = '';
     document.getElementById('inv-pass').value   = '';
-    flashMsg('msg-users');
+    showToast('Usuario invitado correctamente. Se envió un email de confirmación.', 'success', 4000);
   }
 
   async function updateUserRole(userId, newRole) {
     const { error } = await JV_API.updateUserRole(userId, newRole);
     if (error) {
-      alert('Error al cambiar rol: ' + error.message);
-      // Revertir la tabla al estado anterior
+      showToast('Error al cambiar rol: ' + error.message, 'error');
       await loadUsers();
       refreshUsersTable();
       return;
     }
+    showToast('Rol actualizado', 'success', 2000);
     const u = usersData.find(x => x.id === userId);
     if (u) u.role = newRole;
     // Aplicar acceso si el usuario modificado es el actual
@@ -1395,7 +1602,7 @@
 
   async function toggleUserActive(userId, newActive) {
     const { error } = await JV_API.toggleUserActive(userId, newActive);
-    if (error) { alert('Error: ' + error.message); return; }
+    if (error) { showToast('Error: ' + error.message, 'error'); return; }
     const u = usersData.find(x => x.id === userId);
     if (u) u.is_active = newActive;
     refreshUsersTable();
@@ -1407,9 +1614,10 @@
     if (u.id === currentUser.id) { alert('No podés eliminarte a vos mismo.'); return; }
     if (!confirm(`¿Eliminar al usuario "${u.full_name}"?\nEsta acción no se puede deshacer.`)) return;
     const { error } = await JV_API.deleteUser(userId);
-    if (error) { alert('Error: ' + error.message); return; }
+    if (error) { showToast('Error: ' + error.message, 'error'); return; }
     usersData = usersData.filter(x => x.id !== userId);
     refreshUsersTable();
+    showToast('Usuario eliminado', 'warning', 2500);
   }
 
   // ══════════════════════════════════════════
@@ -1520,6 +1728,12 @@
     updateUserRole  : (id, role)   => updateUserRole(id, role),
     toggleUserActive: (id, active) => toggleUserActive(id, active),
     deleteUser  : id  => deleteUser(id),
+    sortLeads   : f   => sortLeads(f),
+    refreshLeads: ()  => refreshLeads(),
+    quickStatus : (el, id) => quickStatus(el, id),
+    setStatus   : (id, s)  => setStatus(id, s),
+    closeDetail : ()  => closeSlideOver(),
+    moveCase    : (id, stage) => moveCase(id, stage),
     async logout() {
       if (realtimeSub) JV_API.unsubscribe(realtimeSub);
       await JV_API.logout();
