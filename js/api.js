@@ -430,8 +430,12 @@ const JV_API = {
         break;
       case 'datos':
         updates.name = data.name;
+        updates.email = data.email;
         updates.whatsapp = data.whatsapp;
+        updates.phone = data.phone;
         updates.address = data.address;
+        updates.city = data.city;
+        updates.jurisdiction = data.jurisdiction;
         updates.matricula = data.matricula;
         break;
     }
@@ -450,7 +454,7 @@ const JV_API = {
   subscribeToNewLeads(tenantId, callback) {
     const sb = getSupabase();
     return sb
-      .channel('new-leads')
+      .channel(`new-leads-${tenantId}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',

@@ -77,6 +77,8 @@
 
     applyRoleAccess();
     initTopbarDate();
+    loadNotifications();
+    document.querySelector('.dash-notif-btn')?.addEventListener('click', toggleNotifPanel);
     showLoading(false);
     switchTab('leads');
 
@@ -131,6 +133,47 @@
       el.classList.add('jv-toast-out');
       setTimeout(() => el.remove(), 350);
     }, duration);
+  }
+
+  // ══════════════════════════════════════════
+  // CONFIRM MODAL
+  // ══════════════════════════════════════════
+  function showConfirm(msg, confirmLabel = 'Confirmar', danger = true) {
+    return new Promise(resolve => {
+      document.getElementById('jv-confirm')?.remove();
+      document.getElementById('jv-confirm-bd')?.remove();
+
+      const bd = document.createElement('div');
+      bd.id = 'jv-confirm-bd';
+      bd.style.cssText = 'position:fixed;inset:0;background:rgba(13,33,55,0.45);z-index:1100;backdrop-filter:blur(2px);animation:fadeIn .2s ease';
+
+      const modal = document.createElement('div');
+      modal.id = 'jv-confirm';
+      modal.style.cssText = [
+        'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%)',
+        'background:white;border-radius:14px;padding:26px 26px 20px',
+        'width:min(400px,90vw);z-index:1101',
+        'box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:fadeInUp .18s ease',
+        'font-family:var(--font-body)',
+      ].join(';');
+
+      const safeMsg  = esc(msg).replace(/\n/g, '<br>');
+      const okColor  = danger ? '#DC2626' : '#2E86AB';
+      modal.innerHTML = `
+        <div style="font-size:14.5px;font-weight:600;color:#1E293B;line-height:1.55;margin-bottom:22px">${safeMsg}</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button id="jv-conf-cancel" style="padding:8px 18px;border-radius:8px;border:1.5px solid #E2E8F0;background:white;color:#64748B;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body)">Cancelar</button>
+          <button id="jv-conf-ok" style="padding:8px 18px;border-radius:8px;border:none;background:${okColor};color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-body)">${esc(confirmLabel)}</button>
+        </div>`;
+
+      const close = r => { bd.remove(); modal.remove(); resolve(r); };
+      bd.addEventListener('click', () => close(false));
+      modal.querySelector('#jv-conf-cancel').addEventListener('click', () => close(false));
+      modal.querySelector('#jv-conf-ok').addEventListener('click', () => close(true));
+      document.body.appendChild(bd);
+      document.body.appendChild(modal);
+      modal.querySelector('#jv-conf-ok').focus();
+    });
   }
 
   // ══════════════════════════════════════════
@@ -197,6 +240,86 @@
     };
     update();
     setInterval(update, 60000);
+  }
+
+  // ══════════════════════════════════════════
+  // NOTIFICACIONES
+  // ══════════════════════════════════════════
+  async function loadNotifications() {
+    const { data } = await JV_API.getNotifications(currentUser.id, true);
+    const dot = document.getElementById('notifDot');
+    if (dot) dot.style.display = (data && data.length > 0) ? '' : 'none';
+  }
+
+  async function toggleNotifPanel() {
+    const existing = document.getElementById('jv-notif-panel');
+    if (existing) { existing.remove(); return; }
+
+    const btn  = document.querySelector('.dash-notif-btn');
+    const rect = btn.getBoundingClientRect();
+
+    const panel = document.createElement('div');
+    panel.id = 'jv-notif-panel';
+    panel.style.cssText = [
+      `position:fixed;top:${rect.bottom + 8}px`,
+      `right:${Math.max(8, window.innerWidth - rect.right)}px`,
+      'width:320px;max-height:420px;overflow-y:auto',
+      'background:white;border-radius:12px;border:1.5px solid #E2E8F0',
+      'box-shadow:0 12px 36px rgba(0,0,0,0.15);z-index:900',
+      'animation:fadeIn .15s ease;font-family:var(--font-body)',
+    ].join(';');
+
+    panel.innerHTML = `
+      <div style="padding:13px 16px;border-bottom:1px solid #F1F5F9;font-size:13px;font-weight:700;color:#0D2137;display:flex;align-items:center;justify-content:space-between">
+        🔔 Notificaciones
+        <button onclick="document.getElementById('jv-notif-panel')?.remove()" style="background:none;border:none;color:#94A3B8;cursor:pointer;font-size:13px;padding:2px 6px;border-radius:4px">✕</button>
+      </div>
+      <div id="notif-list" style="padding:8px">
+        <div style="text-align:center;color:#94A3B8;padding:20px;font-size:13px">Cargando...</div>
+      </div>`;
+    document.body.appendChild(panel);
+
+    // Cierra al hacer clic afuera
+    setTimeout(() => {
+      document.addEventListener('click', function handler(e) {
+        if (!panel.contains(e.target) && !btn.contains(e.target)) {
+          panel.remove();
+          document.removeEventListener('click', handler);
+        }
+      });
+    }, 50);
+
+    // Cargar notificaciones
+    const { data } = await JV_API.getNotifications(currentUser.id);
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div style="text-align:center;color:#94A3B8;padding:24px;font-size:13px">Sin notificaciones recientes</div>';
+      return;
+    }
+
+    const icons = { nuevo_lead: '📋', lead_alto: '🔴', caso_update: '⚖️', sistema: 'ℹ️' };
+    list.innerHTML = data.map(n => `
+      <div style="padding:11px 12px;border-radius:8px;background:${n.is_read ? 'white' : '#EFF6FF'};
+        margin-bottom:4px;border:1px solid ${n.is_read ? 'transparent' : '#BFDBFE'}">
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <span style="font-size:15px;flex-shrink:0">${icons[n.type] || '🔔'}</span>
+          <div style="min-width:0">
+            <div style="font-size:13px;font-weight:${n.is_read ? '500' : '700'};color:#0D2137;line-height:1.4">${esc(n.title)}</div>
+            ${n.body ? `<div style="font-size:12px;color:#64748B;margin-top:2px;line-height:1.4">${esc(n.body)}</div>` : ''}
+            <div style="font-size:11px;color:#94A3B8;margin-top:4px">${timeAgo(n.created_at)}</div>
+          </div>
+        </div>
+      </div>`).join('');
+
+    // Marcar todas como leídas
+    const unread = data.filter(n => !n.is_read);
+    unread.forEach(n => JV_API.markNotificationRead(n.id));
+    if (unread.length > 0) {
+      const dot = document.getElementById('notifDot');
+      if (dot) dot.style.display = 'none';
+    }
   }
 
   // ══════════════════════════════════════════
@@ -1183,7 +1306,7 @@
   }
 
   async function acceptLead(id, btn) {
-    if (!confirm('¿Aceptar este caso y crear el expediente?')) return;
+    if (!await showConfirm('¿Aceptar este caso y crear el expediente?', 'Sí, aceptar', false)) return;
     if (btn) { btn.disabled = true; btn.textContent = 'Creando...'; }
     const { data, error } = await JV_API.acceptLead(id, currentUser.id);
     if (error) {
@@ -1210,7 +1333,7 @@
   }
 
   async function rejectLead(id) {
-    if (!confirm('¿Rechazar este lead?')) return;
+    if (!await showConfirm('¿Rechazar este lead?', 'Rechazar')) return;
     const { error } = await JV_API.updateLeadStatus(id, 'rechazado');
     if (!error) {
       closeSlideOver();
@@ -1315,8 +1438,8 @@
   async function changePassword() {
     const p1 = v('cf-pass1');
     const p2 = v('cf-pass2');
-    if (!p1 || p1.length < 8) { alert('La contraseña debe tener al menos 8 caracteres.'); return; }
-    if (p1 !== p2) { alert('Las contraseñas no coinciden.'); return; }
+    if (!p1 || p1.length < 8) { showToast('La contraseña debe tener al menos 8 caracteres.', 'warning'); return; }
+    if (p1 !== p2) { showToast('Las contraseñas no coinciden.', 'warning'); return; }
     const { error } = await JV_API.changePassword(p1);
     if (!error) {
       showToast('Contraseña actualizada correctamente', 'success');
@@ -1333,8 +1456,8 @@
     const cat    = v('kw-new-cat');
     const impact = parseInt(v('kw-new-impact'));
 
-    if (!word) { alert('Ingresá una palabra clave.'); return; }
-    if (isNaN(impact)) { alert('Ingresá un impacto numérico.'); return; }
+    if (!word) { showToast('Ingresá una palabra clave.', 'warning'); return; }
+    if (isNaN(impact)) { showToast('Ingresá un impacto numérico.', 'warning'); return; }
 
     const { data, error } = await JV_API.addKeyword(currentUser.tenant_id, word, cat, impact);
     if (error) { showToast('Error: ' + (error.message || 'La keyword puede que ya exista.'), 'error'); return; }
@@ -1347,7 +1470,7 @@
   }
 
   async function deleteKeyword(id) {
-    if (!confirm('¿Eliminar esta keyword?')) return;
+    if (!await showConfirm('¿Eliminar esta keyword?')) return;
     const { error } = await JV_API.deleteKeyword(id);
     if (!error) {
       keywordsData = keywordsData.filter(k => k.id !== id);
@@ -1572,14 +1695,14 @@
     const pass   = v('inv-pass').trim();
     const rol    = v('inv-rol');
 
-    if (!nombre)         { alert('Ingresá el nombre completo del usuario.'); return; }
-    if (!email)          { alert('Ingresá el email del usuario.'); return; }
+    if (!nombre)         { showToast('Ingresá el nombre completo del usuario.', 'warning'); return; }
+    if (!email)          { showToast('Ingresá el email del usuario.', 'warning'); return; }
     // Validar que el email solo tenga caracteres ASCII válidos (sin tildes ni ñ)
     if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email)) {
-      alert('⚠ El email "' + email + '" tiene un formato inválido.\n\nLos emails no pueden contener tildes, ñ ni caracteres especiales (ej: á, é, í, ó, ú, ñ).\n\nRevisá que el email esté bien escrito.');
+      showToast('Email inválido: no uses tildes ni caracteres especiales (á, é, í, ñ…)', 'warning', 5000);
       return;
     }
-    if (pass.length < 8) { alert('La contraseña temporal debe tener al menos 8 caracteres.'); return; }
+    if (pass.length < 8) { showToast('La contraseña temporal debe tener al menos 8 caracteres.', 'warning'); return; }
 
     const btn = document.getElementById('inv-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Creando...'; }
@@ -1634,8 +1757,8 @@
   async function deleteUser(userId) {
     const u = usersData.find(x => x.id === userId);
     if (!u) return;
-    if (u.id === currentUser.id) { alert('No podés eliminarte a vos mismo.'); return; }
-    if (!confirm(`¿Eliminar al usuario "${u.full_name}"?\nEsta acción no se puede deshacer.`)) return;
+    if (u.id === currentUser.id) { showToast('No podés eliminarte a vos mismo.', 'warning'); return; }
+    if (!await showConfirm(`¿Eliminar al usuario "${u.full_name}"?\nEsta acción no se puede deshacer.`)) return;
     const { error } = await JV_API.deleteUser(userId);
     if (error) { showToast('Error: ' + error.message, 'error'); return; }
     usersData = usersData.filter(x => x.id !== userId);
@@ -1660,13 +1783,6 @@
   function v(id) {
     const el = document.getElementById(id);
     return el ? el.value : '';
-  }
-
-  function flashMsg(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.add('visible');
-    setTimeout(() => el.classList.remove('visible'), 2500);
   }
 
   function showLoading(visible) {
