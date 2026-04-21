@@ -29,6 +29,7 @@
       </div>
 
       <div class="login-error" id="loginError"></div>
+      <div class="login-error" id="loginInfo" style="background:#e0f2fe;color:#0369a1;display:none"></div>
 
       <div class="form-group">
         <label class="form-label">Email</label>
@@ -72,7 +73,22 @@
       const { data, error } = await JV_API.login(email, password);
 
       if (error) {
-        errorEl.textContent = 'Email o contraseña incorrectos. Intentá de nuevo.';
+        let msg = 'Email o contraseña incorrectos. Verificá tus datos.';
+        const raw = error.message || '';
+
+        if (raw.includes('Email not confirmed')) {
+          msg = '⚠️ Tu cuenta todavía no fue confirmada. Revisá tu bandeja de entrada y hacé clic en el link de confirmación que te enviamos. Si no lo encontrás, revisá spam o usá "¿Olvidaste tu contraseña?" para recibir un nuevo link.';
+        } else if (raw.includes('Invalid login credentials')) {
+          msg = 'Email o contraseña incorrectos. Verificá tus datos.';
+        } else if (raw.includes('Too many requests') || raw.includes('rate limit')) {
+          msg = 'Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentar.';
+        } else if (raw.includes('User not found')) {
+          msg = 'No existe una cuenta con ese email.';
+        } else if (raw) {
+          msg = raw;
+        }
+
+        errorEl.textContent = msg;
         errorEl.style.display = 'block';
         btn.textContent = 'Ingresar';
         btn.disabled = false;
@@ -84,15 +100,21 @@
 
     async function resetPassword() {
       const email = document.getElementById('loginEmail').value.trim();
+      const errorEl = document.getElementById('loginError');
+      const infoEl  = document.getElementById('loginInfo');
       if (!email) {
-        alert('Escribí tu email primero y después clickeá en "¿Olvidaste tu contraseña?"');
+        errorEl.textContent = 'Escribí tu email primero y después hacé clic en "¿Olvidaste tu contraseña?"';
+        errorEl.style.display = 'block';
+        infoEl.style.display = 'none';
         return;
       }
+      errorEl.style.display = 'none';
       const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       await sb.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + '/dashboard.html',
       });
-      alert('Si el email existe, te enviamos un link para restablecer tu contraseña.');
+      infoEl.textContent = '✉️ Si el email existe, te enviamos un link para restablecer tu contraseña. Revisá tu bandeja (y spam).';
+      infoEl.style.display = 'block';
     }
 
     document.getElementById('loginPassword').addEventListener('keydown', (e) => {

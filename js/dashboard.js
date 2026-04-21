@@ -1632,7 +1632,7 @@
         </button>
       </div>
       <div class="user-invite-note">
-        📧 Se enviará un email de confirmación al usuario. Compartí la contraseña temporal de forma segura (por teléfono o mensaje directo).
+        📧 El usuario recibirá un email de confirmación de Supabase. <strong>Debe hacer clic en ese link antes de poder ingresar.</strong> Compartí la contraseña temporal de forma segura (por teléfono o mensaje directo).
       </div>
       <div style="margin-top:10px">
         <span class="config-save-msg" id="msg-users">✓ Usuario creado correctamente</span>
@@ -1728,7 +1728,7 @@
     document.getElementById('inv-nombre').value = '';
     document.getElementById('inv-email').value  = '';
     document.getElementById('inv-pass').value   = '';
-    showToast('Usuario invitado correctamente. Se envió un email de confirmación.', 'success', 4000);
+    showToast('✅ Usuario creado. Debe confirmar su email antes de poder ingresar (revisá spam).', 'success', 6000);
   }
 
   async function updateUserRole(userId, newRole) {
